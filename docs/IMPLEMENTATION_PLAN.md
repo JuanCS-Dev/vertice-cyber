@@ -116,24 +116,101 @@
 # 📝 RESUMO EXECUTIVO
 
 ## Objetivo
-Transformar o Vertice Cyber de uma arquitetura Docker-heavy (11 containers) para **11 Meta-Agents expostos via MCP** (Model Context Protocol) em um único processo Python.
+Transformar o Vertice Cyber de uma arquitetura Docker-heavy (11 containers) para **12 Meta-Agents expostos via MCP** (Model Context Protocol) em um único processo Python.
 
 ## Benefícios
 - **Startup:** De ~2min para <2seg
-- **Memória:** De ~8GB para <150MB
+- **Memória:** De ~8GB para <200MB
 - **Complexidade:** De 11 containers para 1 processo
 - **Integração:** Acesso nativo via vertice-code/Claude/Gemini
 
-## Stack Tecnológico
+## Métricas de Sucesso 2026
 
+| Métrica | Target | Justificativa |
+|---------|--------|---------------|
+| Startup Time | <2s | Produtividade |
+| Memory Usage | <200MB | Permite edge deployment |
+| Threat Detection | **<100ms** | Requisito 2026 para autonomous response |
+| ATT&CK Coverage | >80% técnicas | Defesa abrangente |
+| False Positives | <5% | Qualidade > Quantidade |
+
+## Stack Tecnológico (Atualizado 2026)
+
+### Core Framework
 | Componente | Tecnologia | Versão |
 |------------|------------|--------|
 | MCP Framework | FastMCP | 2.14.x |
 | Validação | Pydantic | 2.5.x |
 | Async | asyncio | Python 3.11+ |
 | HTTP Client | httpx | 0.27.x |
-| MITRE ATT&CK | pyattck | Latest |
-| Breach Check | haveibeenpwned-py | Latest |
+
+### Security & Threat Intel (NOVO)
+| Componente | Tecnologia | Uso |
+|------------|------------|-----|
+| MITRE ATT&CK | pyattck | Threat mapping Enterprise |
+| **MITRE ATLAS** | custom | AI/ML attack defense (14 novas técnicas) |
+| OSINT Avançado | shodan, censys | IoT/exposed services |
+| Vuln Management | nvdlib | NVD database |
+| Exploit Scoring | EPSS API | Prioritização inteligente |
+| Actively Exploited | KEV Catalog | CISA feed |
+
+### Pentest & Scanning (NOVO)
+| Componente | Tecnologia | Uso |
+|------------|------------|-----|
+| Vuln Scanner | nuclei | 9000+ templates |
+| Subdomain Enum | subfinder, amass | Asset discovery |
+| Web Fuzzing | ffuf | Directory/param fuzzing |
+| SAST | semgrep, bandit | Code security |
+
+---
+
+# 🔴 ENHANCEMENTS 2026 (do Brutal Review)
+
+> Baseado em: MITRE ATT&CK v18, MITRE ATLAS, Palo Alto 2026 Forecast, CyberArk
+
+## Requisitos Críticos Adicionados
+
+### 1. Agent Identity System (P0)
+```python
+# Cada agent tem identidade criptográfica
+class AgentIdentity:
+    agent_id: str           # UUID único
+    public_key: bytes       # Ed25519
+    permissions: list[str]  # Least privilege
+    rate_limits: RateLimits # Por agent + recurso
+```
+
+### 2. MITRE ATLAS Integration (P0)
+- 14 novas técnicas para AI/ML attacks
+- Memory Poisoning Detection (vetor #1 em 2026)
+- Prompt Injection Detection
+- Agent Compromise Detection
+
+### 3. Behavioral Anomaly Detection (P0)
+- ML-based (XGBoost para MVP)
+- Latência <100ms
+- Drift detection entre baseline e current behavior
+
+### 4. Enhanced OSINT (P1)
+- Shodan: IoT/exposed services
+- Censys: Internet-wide scanning
+- Amass: OWASP asset discovery
+- Continuous monitoring 24/7
+
+### 5. Continuous Purple Teaming (P1)
+- Breach & Attack Simulation (BAS)
+- Atomic Red Team integration
+- Threat resilience metrics automáticas
+
+### 6. Smart Vulnerability Prioritization (P2)
+- EPSS Score (probabilidade de exploração)
+- KEV Catalog (actively exploited)
+- CVSS v4.0 + Asset Criticality
+
+### 7. Autonomous Response (P2)
+- Immune system que CURA, não só alerta
+- <100ms para actions automatizadas
+- Isolate, Block, Revoke, Killswitch
 
 ---
 

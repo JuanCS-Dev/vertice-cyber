@@ -36,8 +36,29 @@ haveibeenpwned-py>=1.0.0
 # MITRE ATT&CK Framework
 pyattck>=7.0.0
 
-# Cryptography
+# Cryptography (for Agent Identity)
 cryptography>=41.0.0
+
+# OSINT Avançado (2026 Enhancements)
+shodan>=1.31.0        # IoT/exposed services
+censys>=2.2.0         # Internet-wide scanning
+# amass, subfinder, nuclei - install via system (Go binaries)
+
+# Vulnerability Management
+nvdlib>=0.7.0         # NVD database queries
+# EPSS, KEV - custom API clients in code
+
+# SAST/SCA Tools
+semgrep>=1.50.0       # Multi-language SAST
+bandit>=1.7.0         # Python security
+safety>=3.0.0         # Dependency vulnerabilities
+
+# ML for Behavioral Anomaly Detection
+xgboost>=2.0.0        # Lightweight ML (avoid TensorFlow for MVP)
+scikit-learn>=1.4.0   # ML utilities
+
+# Graph Analysis (attack path correlation)
+networkx>=3.2.0       # Graph algorithms
 
 # -----------------------------------------------------------------------------
 # DATA & STORAGE (opcional)
