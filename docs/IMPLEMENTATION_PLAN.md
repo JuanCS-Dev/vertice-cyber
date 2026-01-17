@@ -1655,6 +1655,744 @@ vertice-cyber/
 
 ---
 
+# 📚 APÊNDICE: DOCUMENTAÇÃO EMBARCADA - TECNOLOGIAS 2026
+
+> **IMPORTANTE:** Esta seção contém documentação autocontida para todas as novas tecnologias adicionadas. O implementador pode usar esta seção como referência offline.
+
+---
+
+## A.1 Shodan Python API (OSINT)
+
+### Instalação
+```bash
+pip install shodan
+```
+
+### Conceito
+Shodan é um motor de busca para dispositivos conectados à internet. Diferente do Google que indexa websites, Shodan indexa banners de serviços (SSH, HTTP, FTP, etc.), permitindo descobrir sistemas expostos.
+
+### Uso Básico
+```python
+import shodan
+
+# Inicialização
+api = shodan.Shodan("SUA_API_KEY")
+
+# Buscar informações de um host específico
+async def lookup_host(ip: str) -> dict:
+    """Busca informações de um IP no Shodan."""
+    try:
+        host = api.host(ip)
+        return {
+            "ip": host["ip_str"],
+            "org": host.get("org", "N/A"),
+            "os": host.get("os"),
+            "ports": host.get("ports", []),
+            "vulns": host.get("vulns", []),  # CVEs conhecidas!
+            "services": [
+                {
+                    "port": item["port"],
+                    "transport": item["transport"],
+                    "product": item.get("product"),
+                    "version": item.get("version"),
+                }
+                for item in host.get("data", [])
+            ]
+        }
+    except shodan.APIError as e:
+        return {"error": str(e)}
+
+# Busca por query
+async def search_shodan(query: str, limit: int = 10) -> list[dict]:
+    """
+    Busca dispositivos no Shodan.
+    
+    Exemplos de queries:
+    - "apache country:BR"
+    - "port:22 org:Amazon"
+    - "ssl.cert.subject.cn:*.example.com"
+    - "vuln:CVE-2021-44228" (Log4j)
+    """
+    try:
+        results = api.search(query)
+        return [
+            {
+                "ip": match["ip_str"],
+                "port": match["port"],
+                "org": match.get("org"),
+                "product": match.get("product"),
+                "version": match.get("version"),
+            }
+            for match in results["matches"][:limit]
+        ]
+    except shodan.APIError as e:
+        return [{"error": str(e)}]
+```
+
+### Queries Úteis para Cybersec
+```python
+SHODAN_QUERIES = {
+    # Exposured databases
+    "mongodb_exposed": "port:27017 product:MongoDB",
+    "redis_exposed": "port:6379 product:Redis",
+    "elasticsearch_exposed": "port:9200 product:Elasticsearch",
+    
+    # Vulnerable services
+    "log4j_vulnerable": 'vuln:CVE-2021-44228',
+    "ssh_weak": 'port:22 "SSH-1"',
+    
+    # Cloud misconfigs
+    "aws_s3_exposed": 'http.title:"Index of /" s3',
+    "kubernetes_exposed": 'port:6443 "kubernetes"',
+    
+    # IoT devices
+    "webcams": 'product:webcam',
+    "scada": 'port:502 modbus',
+}
+```
+
+---
+
+## A.2 Censys Python SDK (Internet Scanning)
+
+### Instalação
+```bash
+pip install censys
+```
+
+### Conceito
+Censys realiza varreduras em toda a internet, indexando hosts, serviços e certificados SSL. Similar ao Shodan, mas com foco em dados de certificados.
+
+### Uso Básico
+```python
+from censys.search import CensysHosts, CensysCerts
+
+# Autenticação via env vars: CENSYS_API_ID, CENSYS_API_SECRET
+
+# Buscar hosts
+async def search_hosts(query: str, limit: int = 10) -> list[dict]:
+    """
+    Busca hosts no Censys.
+    
+    Query syntax: https://search.censys.io/search/language
+    Exemplos:
+    - "services.service_name: SSH"
+    - "location.country: Brazil"
+    - "services.tls.certificates.leaf_data.issuer.organization: Let's Encrypt"
+    """
+    h = CensysHosts()
+    results = []
+    
+    for host in h.search(query, per_page=limit):
+        results.append({
+            "ip": host["ip"],
+            "services": [
+                {
+                    "port": svc.get("port"),
+                    "service_name": svc.get("service_name"),
+                    "transport_protocol": svc.get("transport_protocol"),
+                }
+                for svc in host.get("services", [])
+            ],
+            "location": host.get("location"),
+            "autonomous_system": host.get("autonomous_system"),
+        })
+    
+    return results
+
+# Buscar certificados
+async def search_certificates(domain: str) -> list[dict]:
+    """Busca certificados SSL para um domínio."""
+    c = CensysCerts()
+    query = f"names: {domain}"
+    
+    results = []
+    for cert in c.search(query, per_page=25):
+        results.append({
+            "fingerprint": cert.get("fingerprint_sha256"),
+            "issuer": cert.get("issuer", {}).get("organization"),
+            "subject": cert.get("subject", {}).get("common_name"),
+            "validity": {
+                "start": cert.get("validity", {}).get("start"),
+                "end": cert.get("validity", {}).get("end"),
+            }
+        })
+    
+    return results
+```
+
+---
+
+## A.3 EPSS API (Exploit Prediction Scoring System)
+
+### Conceito
+EPSS é um sistema desenvolvido pelo FIRST.org que prediz a **probabilidade de um CVE ser explorado** nos próximos 30 dias. Atualizado diariamente. EPSS v4 lançado em Março 2025.
+
+### Uso (Implementação Custom)
+```python
+import httpx
+from typing import Optional
+
+EPSS_API_URL = "https://api.first.org/data/v1/epss"
+
+async def get_epss_score(cve_id: str) -> dict:
+    """
+    Obtém EPSS score para um CVE.
+    
+    Returns:
+        {
+            "cve": "CVE-2021-44228",
+            "epss": 0.97549,  # 97.5% chance de ser explorado em 30 dias
+            "percentile": 0.99995  # Top 0.005% mais provável
+        }
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{EPSS_API_URL}?cve={cve_id}")
+        data = response.json()
+        
+        if data.get("data"):
+            entry = data["data"][0]
+            return {
+                "cve": entry["cve"],
+                "epss": float(entry["epss"]),
+                "percentile": float(entry["percentile"]),
+                "date": entry.get("date"),
+            }
+        return {"error": "CVE not found"}
+
+async def get_epss_batch(cve_ids: list[str]) -> list[dict]:
+    """Obtém EPSS scores para múltiplos CVEs."""
+    cve_param = ",".join(cve_ids)
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{EPSS_API_URL}?cve={cve_param}")
+        data = response.json()
+        
+        return [
+            {
+                "cve": entry["cve"],
+                "epss": float(entry["epss"]),
+                "percentile": float(entry["percentile"]),
+            }
+            for entry in data.get("data", [])
+        ]
+
+# Classificação por risco EPSS
+def classify_epss_risk(epss_score: float) -> str:
+    """Classifica risco baseado em EPSS score."""
+    if epss_score >= 0.7:
+        return "CRITICAL"  # 70%+ chance de exploit
+    elif epss_score >= 0.3:
+        return "HIGH"
+    elif epss_score >= 0.1:
+        return "MEDIUM"
+    else:
+        return "LOW"
+```
+
+---
+
+## A.4 KEV Catalog (CISA Known Exploited Vulnerabilities)
+
+### Conceito
+KEV é a lista oficial da CISA de vulnerabilidades **ativamente exploitadas**. Se um CVE está no KEV, ele ESTÁ sendo usado em ataques reais. Total: ~1500 CVEs (Jan 2026).
+
+### Uso (Implementação Custom)
+```python
+import httpx
+from typing import Optional
+
+KEV_JSON_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+
+class KEVCatalog:
+    """Cliente para CISA KEV Catalog."""
+    
+    def __init__(self):
+        self._catalog: dict = {}
+        self._cve_set: set = set()
+    
+    async def load(self) -> None:
+        """Carrega catálogo do CISA."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(KEV_JSON_URL)
+            self._catalog = response.json()
+            self._cve_set = {
+                vuln["cveID"] 
+                for vuln in self._catalog.get("vulnerabilities", [])
+            }
+    
+    def is_actively_exploited(self, cve_id: str) -> bool:
+        """Verifica se CVE está sendo exploitado ativamente."""
+        return cve_id in self._cve_set
+    
+    def get_kev_details(self, cve_id: str) -> Optional[dict]:
+        """Retorna detalhes do KEV entry."""
+        for vuln in self._catalog.get("vulnerabilities", []):
+            if vuln["cveID"] == cve_id:
+                return {
+                    "cve": vuln["cveID"],
+                    "vendor": vuln["vendorProject"],
+                    "product": vuln["product"],
+                    "vulnerability_name": vuln["vulnerabilityName"],
+                    "date_added": vuln["dateAdded"],
+                    "due_date": vuln["dueDate"],  # Prazo para remediar
+                    "known_ransomware": vuln.get("knownRansomwareCampaignUse", "Unknown"),
+                }
+        return None
+    
+    def get_recent_additions(self, days: int = 7) -> list[dict]:
+        """Retorna CVEs adicionados nos últimos N dias."""
+        from datetime import datetime, timedelta
+        
+        cutoff = datetime.now() - timedelta(days=days)
+        recent = []
+        
+        for vuln in self._catalog.get("vulnerabilities", []):
+            date_added = datetime.strptime(vuln["dateAdded"], "%Y-%m-%d")
+            if date_added >= cutoff:
+                recent.append(self.get_kev_details(vuln["cveID"]))
+        
+        return recent
+
+# Uso
+kev = KEVCatalog()
+await kev.load()
+is_exploited = kev.is_actively_exploited("CVE-2021-44228")  # True (Log4j)
+```
+
+---
+
+## A.5 NVDLib (National Vulnerability Database)
+
+### Instalação
+```bash
+pip install nvdlib
+```
+
+### Conceito
+NVDLib é wrapper Python para a API do NVD (NIST). Permite buscar CVEs com filtros avançados: por produto, data, severidade, etc.
+
+### Uso Básico
+```python
+import nvdlib
+from datetime import datetime
+
+# Buscar CVE específico
+def get_cve(cve_id: str) -> dict:
+    """Obtém detalhes de um CVE."""
+    results = nvdlib.searchCVE(cveId=cve_id)
+    
+    if results:
+        cve = results[0]
+        return {
+            "cve_id": cve.id,
+            "description": cve.descriptions[0].value if cve.descriptions else "",
+            "cvss_v3": getattr(cve.metrics, "cvssMetricV31", [{}])[0].get("cvssData", {}).get("baseScore") if hasattr(cve.metrics, "cvssMetricV31") else None,
+            "severity": getattr(cve.metrics, "cvssMetricV31", [{}])[0].get("cvssData", {}).get("baseSeverity") if hasattr(cve.metrics, "cvssMetricV31") else None,
+            "published": str(cve.published),
+            "last_modified": str(cve.lastModified),
+            "references": [ref.url for ref in getattr(cve, "references", [])],
+        }
+    return {"error": "CVE not found"}
+
+# Buscar CVEs críticos recentes
+def search_critical_cves(days: int = 7) -> list[dict]:
+    """Busca CVEs críticos dos últimos N dias."""
+    from datetime import timedelta
+    
+    start_date = datetime.now() - timedelta(days=days)
+    
+    results = nvdlib.searchCVE(
+        pubStartDate=start_date,
+        cvssV3Severity="CRITICAL",
+    )
+    
+    return [
+        {
+            "cve_id": cve.id,
+            "cvss": getattr(cve.metrics, "cvssMetricV31", [{}])[0].get("cvssData", {}).get("baseScore"),
+            "description": cve.descriptions[0].value[:200] if cve.descriptions else "",
+        }
+        for cve in results[:20]
+    ]
+
+# Buscar CVEs por produto
+def search_by_product(keyword: str) -> list[dict]:
+    """Busca CVEs por keyword no produto."""
+    results = nvdlib.searchCVE(keywordSearch=keyword)
+    return [
+        {"cve_id": cve.id, "published": str(cve.published)}
+        for cve in results[:20]
+    ]
+```
+
+---
+
+## A.6 Nuclei (Vulnerability Scanner)
+
+### Instalação
+```bash
+# CLI (Go binary) - Recomendado
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+
+# Ou via binário
+# Download de https://github.com/projectdiscovery/nuclei/releases
+
+# Python wrapper (unofficial)
+pip install pynuclei
+```
+
+### Conceito
+Nuclei é um scanner de vulnerabilidades ultra-rápido baseado em templates YAML. Possui 9000+ templates community-driven cobrindo CVEs, misconfigs, exposures, etc.
+
+### Templates
+```yaml
+# Exemplo de template Nuclei
+id: CVE-2021-44228-log4j-rce
+
+info:
+  name: Apache Log4j RCE
+  author: pdteam
+  severity: critical
+  tags: cve,cve2021,rce,log4j
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    headers:
+      X-Api-Version: "${jndi:ldap://{{interactsh-url}}}"
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "dns"
+          - "http"
+```
+
+### Uso via Python (subprocess)
+```python
+import asyncio
+import json
+from typing import Optional
+
+async def run_nuclei(
+    target: str,
+    templates: list[str] = ["cves/", "exposures/"],
+    severity: str = "critical,high",
+) -> list[dict]:
+    """
+    Executa Nuclei scan.
+    
+    Args:
+        target: URL ou IP alvo
+        templates: Lista de templates/diretórios
+        severity: Filtro de severidade
+    
+    Returns:
+        Lista de vulnerabilidades encontradas
+    """
+    cmd = [
+        "nuclei",
+        "-u", target,
+        "-t", ",".join(templates),
+        "-severity", severity,
+        "-json",
+        "-silent",
+    ]
+    
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    
+    stdout, _ = await proc.communicate()
+    
+    vulnerabilities = []
+    for line in stdout.decode().strip().split("\n"):
+        if line:
+            try:
+                vuln = json.loads(line)
+                vulnerabilities.append({
+                    "template_id": vuln.get("template-id"),
+                    "name": vuln.get("info", {}).get("name"),
+                    "severity": vuln.get("info", {}).get("severity"),
+                    "matched_at": vuln.get("matched-at"),
+                    "host": vuln.get("host"),
+                    "curl_command": vuln.get("curl-command"),
+                })
+            except json.JSONDecodeError:
+                continue
+    
+    return vulnerabilities
+
+# Templates por categoria
+NUCLEI_TEMPLATES = {
+    "cves": "cves/",
+    "exposures": "exposures/",
+    "misconfigurations": "misconfiguration/",
+    "vulnerabilities": "vulnerabilities/",
+    "default_logins": "default-logins/",
+    "exposed_panels": "exposed-panels/",
+    "technologies": "technologies/",
+    "owasp": "owasp/",
+}
+```
+
+---
+
+## A.7 Semgrep (SAST - Static Analysis)
+
+### Instalação
+```bash
+pip install semgrep
+```
+
+### Conceito
+Semgrep é ferramenta de análise estática que usa padrões para encontrar bugs e vulnerabilidades em código. Suporta 30+ linguagens. Registry com 2000+ regras community.
+
+### Uso Básico
+```python
+import subprocess
+import json
+
+def run_semgrep(
+    path: str,
+    config: str = "auto",
+) -> dict:
+    """
+    Executa Semgrep scan.
+    
+    Args:
+        path: Caminho para o código
+        config: Configuração (auto, p/security-audit, p/python, etc.)
+    
+    Returns:
+        Resultados do scan
+    """
+    cmd = [
+        "semgrep",
+        "--config", config,
+        "--json",
+        "--quiet",
+        path,
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    
+    if result.returncode == 0:
+        output = json.loads(result.stdout)
+        
+        findings = []
+        for finding in output.get("results", []):
+            findings.append({
+                "rule_id": finding.get("check_id"),
+                "message": finding.get("extra", {}).get("message"),
+                "severity": finding.get("extra", {}).get("severity"),
+                "path": finding.get("path"),
+                "start_line": finding.get("start", {}).get("line"),
+                "end_line": finding.get("end", {}).get("line"),
+                "code": finding.get("extra", {}).get("lines"),
+            })
+        
+        return {
+            "findings": findings,
+            "total": len(findings),
+            "errors": output.get("errors", []),
+        }
+    
+    return {"error": result.stderr}
+
+# Configs úteis para cybersec
+SEMGREP_CONFIGS = {
+    "security_audit": "p/security-audit",
+    "owasp_top10": "p/owasp-top-ten",
+    "python_security": "p/python",
+    "secrets": "p/secrets",
+    "django": "p/django",
+    "flask": "p/flask",
+    "sql_injection": "p/sql-injection",
+    "xss": "p/xss",
+}
+```
+
+### Exemplo de Custom Rule
+```yaml
+# semgrep_rules/eval_detection.yaml
+rules:
+  - id: dangerous-eval
+    patterns:
+      - pattern: eval(...)
+    message: "Uso de eval() é perigoso - possível code injection"
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      cwe: "CWE-94"
+      owasp: "A03:2021 - Injection"
+```
+
+---
+
+## A.8 XGBoost para Anomaly Detection
+
+### Instalação
+```bash
+pip install xgboost scikit-learn
+```
+
+### Conceito
+XGBoost é algoritmo de gradient boosting otimizado. Para cybersec, é usado em detecção de anomalias: tráfego malicioso, fraude, comportamento anômalo de agents.
+
+### Exemplo: Behavioral Anomaly Detector
+```python
+import xgboost as xgb
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class AgentBehavior:
+    """Representa comportamento de um agent."""
+    tool_calls_per_minute: float
+    unique_resources_accessed: int
+    avg_response_time_ms: float
+    error_rate: float
+    consecutive_failures: int
+    is_after_hours: bool
+    new_resource_ratio: float  # % de recursos nunca acessados antes
+
+class BehavioralAnomalyDetector:
+    """Detector de anomalias comportamentais usando XGBoost."""
+    
+    def __init__(self):
+        self.model = xgb.XGBClassifier(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            objective="binary:logistic",
+            eval_metric="auc",
+            random_state=42,
+        )
+        self._is_trained = False
+    
+    def _extract_features(self, behavior: AgentBehavior) -> np.ndarray:
+        """Extrai features do comportamento."""
+        return np.array([
+            behavior.tool_calls_per_minute,
+            behavior.unique_resources_accessed,
+            behavior.avg_response_time_ms,
+            behavior.error_rate,
+            behavior.consecutive_failures,
+            float(behavior.is_after_hours),
+            behavior.new_resource_ratio,
+        ])
+    
+    def train(
+        self,
+        behaviors: list[AgentBehavior],
+        labels: list[int],  # 0=normal, 1=anomaly
+    ) -> dict:
+        """Treina o modelo."""
+        X = np.array([self._extract_features(b) for b in behaviors])
+        y = np.array(labels)
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+        
+        self.model.fit(
+            X_train, y_train,
+            eval_set=[(X_test, y_test)],
+            verbose=False,
+        )
+        
+        self._is_trained = True
+        
+        # Métricas
+        y_pred = self.model.predict(X_test)
+        report = classification_report(y_test, y_pred, output_dict=True)
+        
+        return {
+            "accuracy": report["accuracy"],
+            "precision": report["1"]["precision"],
+            "recall": report["1"]["recall"],
+            "f1": report["1"]["f1-score"],
+        }
+    
+    def predict(self, behavior: AgentBehavior) -> dict:
+        """Prediz se comportamento é anômalo."""
+        if not self._is_trained:
+            raise RuntimeError("Model not trained")
+        
+        X = self._extract_features(behavior).reshape(1, -1)
+        
+        prob = self.model.predict_proba(X)[0][1]
+        is_anomaly = prob > 0.5
+        
+        return {
+            "is_anomaly": is_anomaly,
+            "confidence": float(prob if is_anomaly else 1 - prob),
+            "anomaly_probability": float(prob),
+        }
+    
+    def get_feature_importance(self) -> dict:
+        """Retorna importância de cada feature."""
+        feature_names = [
+            "tool_calls_per_minute",
+            "unique_resources_accessed",
+            "avg_response_time_ms",
+            "error_rate",
+            "consecutive_failures",
+            "is_after_hours",
+            "new_resource_ratio",
+        ]
+        
+        importance = self.model.feature_importances_
+        
+        return {
+            name: float(score)
+            for name, score in sorted(
+                zip(feature_names, importance),
+                key=lambda x: x[1],
+                reverse=True,
+            )
+        }
+```
+
+### Uso para Agent Compromise Detection
+```python
+# Exemplo de uso
+detector = BehavioralAnomalyDetector()
+
+# Treinar com dados históricos
+# (Em produção, usar dados reais de agents)
+detector.train(historical_behaviors, historical_labels)
+
+# Detectar em tempo real
+current_behavior = AgentBehavior(
+    tool_calls_per_minute=100,  # Muito alto!
+    unique_resources_accessed=50,  # Muitos recursos
+    avg_response_time_ms=10,
+    error_rate=0.3,  # Alto
+    consecutive_failures=5,
+    is_after_hours=True,  # Suspeito
+    new_resource_ratio=0.8,  # Acessando muitos recursos novos
+)
+
+result = detector.predict(current_behavior)
+# {"is_anomaly": True, "confidence": 0.95, "anomaly_probability": 0.95}
+
+if result["is_anomaly"]:
+    # ALERT: Agent potencialmente comprometido!
+    await emit_security_alert(agent_id, result)
+```
+
+---
+
 # FIM DO PLANO DE IMPLEMENTAÇÃO
 
 > **Próximos passos:**
@@ -1662,3 +2400,5 @@ vertice-cyber/
 > 2. Executar smoke test
 > 3. Implementar Fase 1 (Magistrate)
 > 4. Continuar com demais fases
+
+**Documento autocontido:** Este plano contém toda documentação necessária para implementação offline.
