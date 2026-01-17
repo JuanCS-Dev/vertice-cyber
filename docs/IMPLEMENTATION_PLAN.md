@@ -35,6 +35,7 @@
 | Fase 2: Intelligence | 🔴 Pendente | 0% | - |
 | Fase 3: Immune System | 🔴 Pendente | 0% | - |
 | Fase 4: Offensive | 🔴 Pendente | 0% | - |
+| Fase 4.5: CyberSec Basic | 🔴 Pendente | 0% | - |
 | Fase 5: Integration | 🔴 Pendente | 0% | - |
 | Fase 6: Dashboard | 🔴 Pendente | 0% | - |
 
@@ -86,6 +87,15 @@
 - [ ] 4.1 - Criar `tools/wargame.py`
 - [ ] 4.2 - Criar `tools/patch_ml.py`
 - [ ] 4.3 - Testes unitários
+
+### Fase 4.5: CyberSec Basic (Agent 12 - Investigador + Pentester)
+- [ ] 4.5.0 - Pesquisa web 2026 (pentest tools, recon APIs)
+- [ ] 4.5.1 - Criar `tools/cybersec_basic.py`
+- [ ] 4.5.2 - Implementar reconnaissance tools (port scan, subdomain enum)
+- [ ] 4.5.3 - Implementar vulnerability assessment básico
+- [ ] 4.5.4 - Implementar web app security checks (OWASP Top 10)
+- [ ] 4.5.5 - Testes unitários
+- [ ] 4.5.6 - Teste real: auditar segurança do vertice-code webapp
 
 ### Fase 5: Integration
 - [ ] 5.1 - Criar `tools/cli.py`
