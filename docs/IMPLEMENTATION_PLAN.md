@@ -36,6 +36,7 @@
 | Fase 3: Immune System | 🔴 Pendente | 0% | - |
 | Fase 4: Offensive | 🔴 Pendente | 0% | - |
 | Fase 5: Integration | 🔴 Pendente | 0% | - |
+| Fase 6: Dashboard | 🔴 Pendente | 0% | - |
 
 ## Log de Implementação
 
@@ -92,6 +93,13 @@
 - [ ] 5.3 - Testes E2E
 - [ ] 5.4 - Documentação final
 - [ ] 5.5 - Configuração MCP para vertice-code
+
+### Fase 6: Dashboard Web (Gemini vai implementar)
+- [ ] 6.1 - Setup projeto webapp simples
+- [ ] 6.2 - UI para visualizar status dos agents
+- [ ] 6.3 - Interface para chamar MCP tools
+- [ ] 6.4 - Conexão com MCP server via SSE/HTTP
+- [ ] 6.5 - Deploy e integração
 
 ---
 
