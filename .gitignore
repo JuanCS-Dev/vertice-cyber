@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+vertice-cyber.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# API Keys and secrets
+.env.local
+secrets.json
+config/secrets.yaml
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+.dockerignore
+
+# Node modules (if any)
+node_modules/
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# ML models and data
+models/*.pkl
+models/*.joblib
+data/
+!data/.gitkeep
+
+# Documentation builds
+docs/_build/
+docs/build/
+
+# Backup files
+*.bak
+*.backup
