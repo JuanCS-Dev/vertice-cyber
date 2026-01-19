@@ -11,10 +11,17 @@ from fastmcp import FastMCP, Context
 
 from core.settings import settings
 from core.memory import get_memory_pool
-from tools.magistrate import ethical_validate, ethical_audit
+from tools.magistrate import ethical_validate
 from tools.osint import osint_investigate, osint_breach_check, osint_google_dork
 from tools.threat import threat_analyze, threat_intelligence, threat_predict
 from tools.compliance import compliance_assess, compliance_report, compliance_check
+from tools.mcp_ai_tools import (
+    ai_threat_analysis,
+    ai_compliance_assessment,
+    ai_osint_analysis,
+    ai_stream_analysis,
+    ai_integrated_assessment,
+)
 
 # Import AI tools module to register tools
 
@@ -166,14 +173,15 @@ async def ethical_validate_tool(
     return result
 
 
-@mcp.tool()
-async def ethical_audit_tool(
-    ctx: Context, actions: List[Dict[str, Any]]
-) -> Dict[str, Any]:
-    """Audita uma lista de ações para conformidade ética."""
-    result = await ethical_audit(ctx, actions)
-    await ctx.info("Ethical audit completed")
-    return result
+# =============================================================================
+# AI TOOLS (Vertex AI)
+# =============================================================================
+
+mcp.tool()(ai_threat_analysis)
+mcp.tool()(ai_compliance_assessment)
+mcp.tool()(ai_osint_analysis)
+mcp.tool()(ai_stream_analysis)
+mcp.tool()(ai_integrated_assessment)
 
 
 # CONSTITUTIONAL EXEMPTION (Padrão Pagani - Artigo II):

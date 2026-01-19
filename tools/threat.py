@@ -111,7 +111,8 @@ class ThreatProphet:
         Returns:
             ThreatAnalysis com indicadores, técnicas e predições
         """
-        await self.event_bus.emit(
+        event_bus = get_event_bus()
+        await event_bus.emit(
             EventType.THREAT_DETECTED,
             {"target": target, "analysis_type": "comprehensive"},
             source="threat_prophet",
@@ -146,6 +147,10 @@ class ThreatProphet:
         )
 
         return analysis
+
+    async def predict_threats(self, target: str) -> List[ThreatPrediction]:
+        """Gera predições de ameaças para um alvo."""
+        return await self._generate_predictions(target)
 
     async def _gather_indicators(self, target: str) -> List[ThreatIndicator]:
         """Coleta indicadores de ameaça para o alvo."""

@@ -63,14 +63,31 @@ async def compliance_report(ctx, target: str, frameworks: List[str]) -> Dict[str
     # Calculate consolidated metrics
     if assessments:
         total_score = sum(a.overall_score for a in assessments) / len(assessments)
+        
+        def get_status_val(x):
+            if hasattr(x, "value"):
+                return x.value
+            if isinstance(x, str):
+                return x
+            return "not_applicable"
+
+        status_order = [
+            "compliant",
+            "partially_compliant",
+            "non_compliant",
+            "not_applicable",
+        ]
+
+        def get_status_index(x):
+            val = get_status_val(x)
+            try:
+                return status_order.index(val)
+            except ValueError:
+                return len(status_order) - 1
+
         overall_status = max(
             (a.overall_status for a in assessments),
-            key=lambda x: [
-                "compliant",
-                "partially_compliant",
-                "non_compliant",
-                "not_applicable",
-            ].index(x.value),
+            key=get_status_index,
         )
     else:
         total_score = 0.0

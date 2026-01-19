@@ -15,12 +15,14 @@ class TestThreatProphetCore:
     @pytest.fixture
     def prophet(self):
         """Create threat prophet for testing."""
+        from unittest.mock import AsyncMock
         with (
             patch("tools.threat.get_settings") as mock_settings,
             patch("tools.threat.get_agent_memory") ,
-            patch("tools.threat.get_event_bus") ,
+            patch("tools.threat.get_event_bus") as mock_bus,
         ):
             mock_settings.return_value.data_dir = "/tmp/test"
+            mock_bus.return_value.emit = AsyncMock()
             prophet = ThreatProphet()
             return prophet
 
@@ -29,7 +31,7 @@ class TestThreatProphetCore:
         assert hasattr(prophet, "settings")
         assert hasattr(prophet, "memory")
         assert hasattr(prophet, "event_bus")
-        assert hasattr(prophet, "api")
+        assert hasattr(prophet, "mitre_client")
 
     @pytest.mark.asyncio
     async def test_analyze_threats_basic(self, prophet):
@@ -78,8 +80,8 @@ class TestThreatProphetCore:
         """Test threat prediction."""
         result = await prophet.predict_threats("test.com")
 
-        assert hasattr(result, "predictions")
-        assert hasattr(result, "confidence")
+        assert isinstance(result, list)
+        assert len(result) > 0
 
     @pytest.mark.asyncio
     async def test_generate_predictions(self, prophet):

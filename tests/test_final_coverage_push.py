@@ -39,7 +39,12 @@ def test_coverage_push_compliance_models():
     assert control.control_id == "ctrl1"
 
     framework_data = ComplianceFrameworkData(
-        framework_id="gdpr", name="GDPR", version="1.0"
+        framework_id="gdpr",
+        name="GDPR",
+        version="1.0",
+        description="General Data Protection Regulation",
+        controls=[],
+        categories=["Privacy"],
     )
     assert framework_data.framework_id == "gdpr"
 
@@ -85,7 +90,12 @@ def test_coverage_push_osint_models():
     )
     assert finding.source == "test"
 
-    breach = BreachInfo(name="Test Breach", date="2024-01-01", data_classes=["emails"])
+    breach = BreachInfo(
+        name="Test Breach",
+        date="2024-01-01",
+        data_classes=["emails"],
+        is_verified=True,
+    )
     assert breach.name == "Test Breach"
 
     result = OSINTResult(target="test@example.com", depth=InvestigationDepth.BASIC)

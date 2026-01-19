@@ -221,6 +221,7 @@ class OSINTHunter:
 
     async def _investigate_email(self, email: str, result: OSINTResult) -> None:
         """Investiga um email."""
+        result.sources_checked.append("email_analysis")
         result.sources_checked.append("hibp_breaches")
         result.breaches = await self.check_breach(email)
 

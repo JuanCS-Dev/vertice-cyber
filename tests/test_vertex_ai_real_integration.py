@@ -19,13 +19,13 @@ class TestVertexAIRealIntegration:
         with patch.dict(
             os.environ,
             {
-                "GOOGLE_CLOUD_PROJECT": "vertice-ai-project",
-                "GOOGLE_CLOUD_LOCATION": "us-central1",
+                "GOOGLE_CLOUD_PROJECT": "vertice-ai",
+                "GOOGLE_CLOUD_LOCATION": "global",
             },
         ):
             with patch("vertexai.init") as mock_init:
                 with patch(
-                    "vertexai.generative_models.GenerativeModel"
+                    "tools.vertex_ai.GenerativeModel"
                 ) as mock_model_class:
                     mock_model = MagicMock()
                     mock_model.generate_content_async = AsyncMock()
@@ -39,14 +39,14 @@ class TestVertexAIRealIntegration:
 
     def test_vertex_ai_gcp_initialization(self, mock_gcp_auth):
         """Test Vertex AI initialization with GCP credentials."""
-        # Check that environment variables are used
-        assert "GOOGLE_CLOUD_PROJECT" in os.environ
-        assert os.environ["GOOGLE_CLOUD_PROJECT"] == "vertice-ai-project"
-
-        # Verify vertexai.init was called with correct parameters
-        mock_gcp_auth["init"].assert_called_once_with(
-            project="vertice-ai-project", location="us-central1"
-        )
+        # Force re-instantiation to trigger init with patched environment
+        with patch("vertexai.init") as mock_init:
+            with patch.dict(os.environ, {"GCP_PROJECT_ID": "vertice-ai"}):
+                _ = VertexAIIntegration()
+                # Verify vertexai.init was called with correct parameters
+                mock_init.assert_called_with(
+                    project="vertice-ai", location="global"
+                )
 
     @pytest.mark.asyncio
     async def test_real_vertex_ai_threat_analysis(self, mock_gcp_auth):
@@ -147,7 +147,7 @@ class TestVertexAIRealIntegration:
         # Mock streaming response
         mock_response = MagicMock()
 
-        async def async_generator():
+        async def async_generator(*args, **kwargs):
             yield MagicMock(text="Analysis starting...")
             yield MagicMock(text="Processing indicators...")
             yield MagicMock(text="High risk detected!")

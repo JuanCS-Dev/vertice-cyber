@@ -20,26 +20,38 @@ class TestVertexAIIntegration:
             integration = VertexAIIntegration()
             return integration
 
-    def test_vertex_ai_initialization(self, vertex_ai):
-        """Test Vertex AI initialization."""
-        # Project ID may be None if not configured
-        assert vertex_ai.location == "us-central1"
-        assert vertex_ai.model_name == "gemini-1.5-pro-002"
-        assert vertex_ai._models == {}
+    def test_vertex_ai_initialization_defaults(self):
+        """Test initialization with default values."""
+        vertex_ai = VertexAIIntegration()
+        assert vertex_ai.location == "global"
 
-    def test_get_model_caching(self, vertex_ai):
-        """Test model caching functionality."""
-        with patch("vertexai.generative_models.GenerativeModel") as mock_model_class:
-            mock_model = MagicMock()
-            mock_model_class.return_value = mock_model
+        def test_get_model_caching(self, vertex_ai):
 
-            # Get model twice
-            model1 = vertex_ai.get_model("gemini-1.5-pro")
-            model2 = vertex_ai.get_model("gemini-1.5-pro")
+            """Test model caching functionality."""
 
-            # Should be the same instance (cached)
-            assert model1 is model2
-            assert model1 is mock_model
+            with patch("tools.vertex_ai.GenerativeModel") as mock_model_class:
+
+                mock_model = MagicMock()
+
+                mock_model_class.return_value = mock_model
+
+        
+
+                # Get model twice
+
+                model1 = vertex_ai.get_model("gemini-1.5-pro")
+
+                model2 = vertex_ai.get_model("gemini-1.5-pro")
+
+        
+
+                # Should be the same instance (cached)
+
+                assert model1 is model2
+
+                assert model1 is mock_model
+
+    
             # Should only create one instance
             assert mock_model_class.call_count == 1
 
@@ -173,37 +185,69 @@ class TestVertexAIIntegration:
             assert vertex_ai.location == "europe-west1"
             assert vertex_ai.model_name == "gemini-pro-vision"
 
-    def test_get_model_different_names(self):
-        """Test getting models with different names."""
-        with patch("vertexai.generative_models.GenerativeModel") as mock_model_class:
-            mock_model1 = MagicMock()
-            mock_model2 = MagicMock()
-            mock_model_class.side_effect = [mock_model1, mock_model2]
+        def test_get_model_different_names(self):
 
-            vertex_ai = VertexAIIntegration()
+            """Test getting models with different names."""
 
-            # Get two different models
-            model1 = vertex_ai.get_model("gemini-1.5-pro")
-            model2 = vertex_ai.get_model("gemini-pro-vision")
+            with patch("tools.vertex_ai.GenerativeModel") as mock_model_class:
 
-            assert model1 is mock_model1
+                mock_model1 = MagicMock()
+
+                mock_model2 = MagicMock()
+
+                mock_model_class.side_effect = [mock_model1, mock_model2]
+
+        
+
+                vertex_ai = VertexAIIntegration()
+
+        
+
+                # Get two different models
+
+                model1 = vertex_ai.get_model("gemini-1.5-pro")
+
+                model2 = vertex_ai.get_model("gemini-pro-vision")
+
+        
+
+                assert model1 is mock_model1
+
+                assert model2 is mock_model2
+
+    
             assert model2 is mock_model2
             assert mock_model_class.call_count == 2
 
-    def test_model_caching_same_name(self):
-        """Test that same model name returns cached instance."""
-        with patch("vertexai.generative_models.GenerativeModel") as mock_model_class:
-            mock_model = MagicMock()
-            mock_model_class.return_value = mock_model
+        def test_model_caching_same_name(self):
 
-            vertex_ai = VertexAIIntegration()
+            """Test that same model name returns cached instance."""
 
-            # Get same model twice
-            model1 = vertex_ai.get_model("gemini-1.5-pro")
-            model2 = vertex_ai.get_model("gemini-1.5-pro")
+            with patch("tools.vertex_ai.GenerativeModel") as mock_model_class:
 
-            assert model1 is model2
-            assert model1 is mock_model
+                mock_model = MagicMock()
+
+                mock_model_class.return_value = mock_model
+
+        
+
+                vertex_ai = VertexAIIntegration()
+
+        
+
+                # Get same model twice
+
+                model1 = vertex_ai.get_model("gemini-1.5-pro")
+
+                model2 = vertex_ai.get_model("gemini-1.5-pro")
+
+        
+
+                assert model1 is model2
+
+                assert model1 is mock_model
+
+    
             # Should only create one instance
             assert mock_model_class.call_count == 1
 

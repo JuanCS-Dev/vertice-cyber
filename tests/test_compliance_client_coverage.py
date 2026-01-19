@@ -56,14 +56,23 @@ class TestComplianceClientCoverage:
 
         # Create mock cache data
         mock_data = {
-            "frameworks": {"gdpr": {"id": "gdpr"}},
-            "controls": {"ctrl1": {"id": "ctrl1"}},
+            "frameworks": {
+                "gdpr": {
+                    "framework_id": "gdpr",
+                    "name": "GDPR",
+                    "version": "1.0",
+                    "description": "Desc",
+                    "controls": [],
+                    "categories": [],
+                }
+            },
+            "controls": {},
             "last_update": datetime.now().isoformat(),
         }
 
         # Mock file operations
         with (
-            patch.object(client.cache_file, "exists", return_value=True),
+            patch("tools.compliance.client.Path.exists", return_value=True),
             patch("aiofiles.open") as mock_open,
             patch("json.loads", return_value=mock_data) ,
             patch("tools.compliance.client.datetime") as mock_datetime,
@@ -95,21 +104,24 @@ class TestComplianceClientCoverage:
             except NotImplementedError:
                 pass  # Expected for now
 
-    def test_get_frameworks_empty(self, client):
+    @pytest.mark.asyncio
+    async def test_get_frameworks_empty(self, client):
         """Cover get_frameworks method with empty data."""
-        result = client.get_frameworks()
-        assert isinstance(result, dict)
+        result = await client.get_frameworks()
+        assert isinstance(result, list)
         # Should return empty or default frameworks
 
-    def test_get_controls_empty(self, client):
+    @pytest.mark.asyncio
+    async def test_get_controls_empty(self, client):
         """Cover get_controls method with empty data."""
-        result = client.get_controls("gdpr")
+        result = await client.get_controls("gdpr")
         assert isinstance(result, list)
         # Should return empty list
 
-    def test_get_requirements_empty(self, client):
+    @pytest.mark.asyncio
+    async def test_get_requirements_empty(self, client):
         """Cover get_requirements method with empty data."""
-        result = client.get_requirements("gdpr")
+        result = await client.get_requirements("gdpr")
         assert isinstance(result, list)
         # Should return empty list
 

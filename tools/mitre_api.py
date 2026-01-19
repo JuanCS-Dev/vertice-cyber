@@ -20,7 +20,7 @@ from .mitre_models import (
 )
 
 from .mitre_cache import MITRECache
-from .mitre_client import MITREAttackAPI, get_mitre_client
+from .mitre_client import MITREAttackAPI, get_mitre_client, _mitre_clients
 
 
 # Additional utility functions for test coverage
@@ -75,6 +75,7 @@ __all__ = [
     "MITRECache",
     "MITREAttackAPI",
     "get_mitre_client",
+    "_mitre_clients",
     "get_control",
     "get_controls_by_framework",
     "get_all_controls",

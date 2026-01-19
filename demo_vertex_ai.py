@@ -20,7 +20,7 @@ async def demo_vertex_ai_integration():
     if project_id == "NOT_CONFIGURED":
         print("❌ GCP não configurado. Para usar Vertex AI:")
         print("1. Configure GCP_PROJECT_ID=vertice-ai")
-        print("2. Configure GCP_LOCATION=us-central1")
+        print("2. Configure GCP_LOCATION=global")
         print("3. Faça login: gcloud auth login")
         print("4. Configure projeto: gcloud config set project vertice-ai")
         return

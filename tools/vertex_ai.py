@@ -27,7 +27,7 @@ class VertexAIIntegration:
             "GCP_PROJECT_ID", self.settings.api_keys.gcp_project_id
         )
         self.location: str = os.getenv(
-            "GCP_LOCATION", self.settings.api_keys.gcp_location or "us-central1"
+            "GCP_LOCATION", self.settings.api_keys.gcp_location or "global"
         )
         self.model_name: str = os.getenv(
             "VERTEX_MODEL", self.settings.api_keys.vertex_model or "gemini-1.5-pro-002"
@@ -48,10 +48,11 @@ class VertexAIIntegration:
 
     def get_model(self, model_name: Optional[str] = None) -> GenerativeModel:
         """Get or create a cached GenerativeModel instance."""
-        model_name = model_name or self.model_name
-        if model_name not in self._models:
-            self._models[model_name] = GenerativeModel(model_name)
-        return self._models[model_name]
+        name = model_name or self.model_name
+        if name not in self._models:
+            # We use name as positional argument to match test expectations
+            self._models[name] = GenerativeModel(name)
+        return self._models[name]
 
     async def analyze_threat_intelligence(
         self, query: str, context: Dict[str, Any], model_name: Optional[str] = None

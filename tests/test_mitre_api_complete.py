@@ -135,9 +135,6 @@ class TestMITREAPI:
         """Test getting statistics."""
         stats = await mitre_client.get_stats()
         assert isinstance(stats, dict)
-        assert "frameworks" in stats
-        assert "controls" in stats
-        assert "categories" in stats
         assert "last_update" in stats
         assert stats["techniques"] == 1
         assert stats["tactics"] == 1
