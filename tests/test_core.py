@@ -3,7 +3,7 @@ Tests for Vertice Cyber core modules.
 """
 
 import pytest
-from core.settings import get_settings, Settings
+from core.settings import get_settings
 from core.memory import get_agent_memory, AgentMemory
 from core.event_bus import get_event_bus, EventBus, EventType
 

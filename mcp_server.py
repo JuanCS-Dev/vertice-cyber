@@ -6,11 +6,13 @@ Expõe 11 Meta-Agents como MCP Tools.
 
 import argparse
 import logging
+from typing import Any, Dict, List, Optional
 
 from fastmcp import FastMCP, Context
 
 from core.settings import settings
 from core.memory import get_memory_pool
+from tools.magistrate import ethical_validate, ethical_audit
 
 logging.basicConfig(
     level=getattr(logging, settings.server.log_level),
@@ -49,7 +51,7 @@ async def get_agents_list() -> str:
 # Vertice Cyber Agents
 | # | Agent | Tier | Status |
 |---|-------|------|--------|
-| 01 | Ethical Magistrate | Governance | ✅ |
+| 01 | Ethical Magistrate | Governance | ✅ Active |
 | 02 | OSINT Hunter | Intelligence | 🔄 |
 | 03 | Threat Prophet | Intelligence | 🔄 |
 | 04 | Compliance Guardian | Intelligence | 🔄 |
@@ -75,7 +77,7 @@ async def system_health(ctx: Context) -> dict:
     return {
         "status": "healthy",
         "version": settings.version,
-        "agents_loaded": 2,
+        "agents_loaded": 3,
         "agents_total": 11,
     }
 
@@ -85,8 +87,44 @@ async def list_tools(ctx: Context) -> list[dict]:
     """Lista todas as tools disponíveis."""
     return [
         {"name": "system_health", "agent": "bridge"},
-        {"name": "ethical_validate", "agent": "magistrate", "status": "pending"},
+        {"name": "ethical_validate", "agent": "magistrate"},
+        {"name": "ethical_audit", "agent": "magistrate"},
     ]
+
+
+@mcp.tool()
+async def ethical_validate_tool(
+    ctx: Context,
+    action: str,
+    context: Optional[Dict[str, Any]] = None,
+    actor: str = "user",
+) -> Dict[str, Any]:
+    """
+    Valida uma ação contra o framework ético de 7 fases.
+
+    Args:
+        action: Descrição da ação a ser validada
+        context: Contexto adicional (has_pii, target, etc.)
+        actor: Quem está solicitando a ação
+
+    Returns:
+        Decisão ética com approved, conditions, reasoning
+    """
+    return await ethical_validate(ctx, action, context, actor)
+
+
+@mcp.tool()
+async def ethical_audit_tool(ctx: Context, limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Retorna histórico de decisões éticas.
+
+    Args:
+        limit: Número máximo de decisões a retornar
+
+    Returns:
+        Lista de decisões recentes
+    """
+    return await ethical_audit(ctx, limit)
 
 
 # =============================================================================
@@ -115,6 +153,8 @@ def main():
         print("🔺 Vertice Cyber - Tools Check")
         print("  ✅ system_health")
         print("  ✅ list_tools")
+        print("  ✅ ethical_validate_tool")
+        print("  ✅ ethical_audit_tool")
         return
 
     if args.http:
