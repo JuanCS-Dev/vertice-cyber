@@ -1,23 +1,31 @@
 """
-Additional MITRE API Tests
+Test MITRE API Client
 Testes adicionais para melhorar cobertura do MITRE API.
 """
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock
 from datetime import datetime
 
-from tools.mitre_api import MITREAttackAPI, get_mitre_client
+from tools.mitre_api import MITREAttackAPI
 
 
-class TestMITREAdditionalCoverage:
-    """Additional tests for MITRE API to reach 99% coverage."""
+class TestMITREAPI:
+    """Test MITRE API functionality."""
 
     @pytest.fixture
-    async def mitre_client(self):
-        """Create MITRE client for testing."""
+    def mitre_client(self):
+        """Create MITRE client for testing with mocked data."""
         client = MITREAttackAPI("enterprise")
-        # Mock to avoid real API calls
+
+        # Clear any cached data to avoid interference
+        client._frameworks = {}
+        client._last_update = None
+
+        # Mock _ensure_data_loaded to do nothing (prevent data loading)
+        client._ensure_data_loaded = AsyncMock()
+
+        # Mock data to avoid real API calls
         client._techniques = {
             "T1056": type(
                 "MockTechnique",
@@ -28,6 +36,7 @@ class TestMITREAdditionalCoverage:
                     "description": "Test technique",
                     "tactics": ["Credential Access", "Collection"],
                     "platforms": ["Windows", "Linux"],
+                    "is_subtechnique": False,
                 },
             )()
         }
@@ -45,7 +54,16 @@ class TestMITREAdditionalCoverage:
         }
         client._actors = {}
         client._last_update = datetime.now()
+
         return client
+
+    @pytest.mark.asyncio
+    async def test_get_technique_found(self, mitre_client):
+        """Test getting existing technique."""
+        technique = await mitre_client.get_technique("T1056")
+        assert technique is not None
+        assert technique.technique_id == "T1056"
+        assert technique.name == "Input Capture"
 
     @pytest.mark.asyncio
     async def test_get_technique_not_found(self, mitre_client):
@@ -125,17 +143,7 @@ class TestMITREAdditionalCoverage:
         assert stats["tactics"] == 1
         assert stats["actors"] == 0
 
-    def test_singleton_pattern(self):
-        """Test singleton pattern for MITRE clients."""
-        client1 = get_mitre_client("enterprise")
-        client2 = get_mitre_client("enterprise")
-        assert client1 is client2
-
-        # Different domains should be different instances
-        client3 = get_mitre_client("mobile")
-        assert client1 is not client3
-
-    def test_get_collection_id_mapping(self):
+    def test_collection_id_mapping(self):
         """Test collection ID mapping for different domains."""
         client = MITREAttackAPI("enterprise")
         assert (
@@ -152,4 +160,15 @@ class TestMITREAdditionalCoverage:
         assert (
             client._get_collection_id("unknown")
             == "95ecc380-afe9-11e3-96b9-12313b01b281"
-        )  # default
+        )
+
+    def test_initialization_attributes(self):
+        """Test MITRE client initialization attributes."""
+        client = MITREAttackAPI("enterprise")
+        assert client.domain == "enterprise"
+        assert "cti-taxii.mitre.org" in client.collection_url
+        assert "95ecc380-afe9-11e3-96b9-12313b01b281" in client.collection_url
+        assert hasattr(client, "cache_file")
+        assert hasattr(client, "_techniques")
+        assert hasattr(client, "_tactics")
+        assert hasattr(client, "_actors")

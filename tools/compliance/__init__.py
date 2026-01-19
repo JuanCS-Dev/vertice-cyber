@@ -12,6 +12,11 @@ from .models import (
 )
 from .client import get_compliance_api
 from .guardian import get_compliance_guardian
+from .tools import (
+    compliance_assess,
+    compliance_report,
+    compliance_check,
+)
 
 __all__ = [
     # Models
@@ -23,4 +28,8 @@ __all__ = [
     # API
     "get_compliance_api",
     "get_compliance_guardian",
+    # Tools
+    "compliance_assess",
+    "compliance_report",
+    "compliance_check",
 ]

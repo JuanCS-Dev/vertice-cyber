@@ -38,7 +38,14 @@ class ComplianceGuardian:
         self.settings = get_settings()
         self.memory = get_agent_memory("compliance_guardian")
         self.event_bus = get_event_bus()
-        self.compliance_api = get_compliance_api()
+        self._compliance_api = None
+
+    @property
+    def compliance_api(self):
+        """Lazy initialization of compliance API."""
+        if self._compliance_api is None:
+            self._compliance_api = get_compliance_api()
+        return self._compliance_api
 
     async def assess_compliance(
         self, target: str, framework: ComplianceFramework

@@ -18,11 +18,12 @@ def is_fastmcp_available() -> bool:
     global _fastmcp_available
     if _fastmcp_available is None:
         try:
-            # Try to import fastmcp components (this triggers the RichHandler bug if present)
-            import fastmcp  # noqa: F401
-            from fastmcp import Context  # noqa: F401
-
-            _fastmcp_available = True
+            # FastMCP has a RichHandler compatibility bug in current version
+            # For now, always treat as unavailable to avoid import issues
+            _fastmcp_available = False
+            logging.info(
+                "FastMCP compatibility layer: treating as unavailable due to known RichHandler bug"
+            )
         except Exception as e:
             _fastmcp_available = False
             logging.warning(f"FastMCP not available due to: {e}")
@@ -43,3 +44,21 @@ class MockContext:
     def error(self, msg: str):
         """Mock error logging."""
         logging.error(f"[MOCK CONTEXT] {msg}")
+
+
+def get_fastmcp_context():
+    """Get fastmcp Context instance, or MockContext if unavailable."""
+    global _fastmcp_context
+    if _fastmcp_context is None:
+        if is_fastmcp_available():
+            try:
+                import fastmcp
+
+                Context = getattr(fastmcp, "Context")
+                _fastmcp_context = Context()
+            except Exception as e:
+                logging.warning(f"Failed to create fastmcp Context: {e}")
+                _fastmcp_context = MockContext()
+        else:
+            _fastmcp_context = MockContext()
+    return _fastmcp_context

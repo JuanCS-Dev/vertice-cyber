@@ -4,15 +4,12 @@ Funções MCP para integração com o servidor FastMCP.
 """
 
 from typing import Dict, Any, List
-from fastmcp import Context
 
 from .guardian import get_compliance_guardian
 from .models import ComplianceFramework
 
 
-async def compliance_assess(
-    ctx: Context, target: str, framework: str
-) -> Dict[str, Any]:
+async def compliance_assess(ctx, target: str, framework: str) -> Dict[str, Any]:
     """
     Executa avaliação de conformidade para um framework específico.
 
@@ -36,9 +33,7 @@ async def compliance_assess(
     return assessment.model_dump()
 
 
-async def compliance_report(
-    ctx: Context, target: str, frameworks: List[str]
-) -> Dict[str, Any]:
+async def compliance_report(ctx, target: str, frameworks: List[str]) -> Dict[str, Any]:
     """
     Gera relatório de conformidade para múltiplos frameworks.
 
@@ -97,9 +92,7 @@ async def compliance_report(
     return report
 
 
-async def compliance_check(
-    ctx: Context, requirement_id: str, target: str
-) -> Dict[str, Any]:
+async def compliance_check(ctx, requirement_id: str, target: str) -> Dict[str, Any]:
     """
     Verifica conformidade para um requisito específico.
 

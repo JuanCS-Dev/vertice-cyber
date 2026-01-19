@@ -25,7 +25,13 @@ class APIKeysSettings(BaseSettings):
     )
     openai_api_key: Optional[SecretStr] = Field(default=None)
     anthropic_api_key: Optional[SecretStr] = Field(default=None)
-    gcp_project_id: Optional[str] = Field(default=None)
+    gcp_project_id: Optional[str] = Field(
+        default=None, description="Google Cloud Project ID"
+    )
+    gcp_location: str = Field(default="us-central1", description="Google Cloud Region")
+    vertex_model: str = Field(
+        default="gemini-1.5-pro-002", description="Vertex AI Model"
+    )
 
 
 class ServerSettings(BaseSettings):

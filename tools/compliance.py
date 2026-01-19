@@ -7,14 +7,16 @@ Todas as funcionalidades foram movidas para módulos separados em tools/complian
 """
 
 # Re-export everything from the refactored modules for backward compatibility
-from .compliance import (
+from .compliance.models import (
     ComplianceFramework,
     ComplianceStatus,
     ComplianceRequirement,
     ComplianceCheck,
     ComplianceAssessment,
-    get_compliance_api,
-    get_compliance_guardian,
+)
+from .compliance.client import get_compliance_api
+from .compliance.guardian import get_compliance_guardian
+from .compliance.tools import (
     compliance_assess,
     compliance_report,
     compliance_check,

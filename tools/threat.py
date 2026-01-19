@@ -89,7 +89,14 @@ class ThreatProphet:
         self.settings = get_settings()
         self.memory = get_agent_memory("threat_prophet")
         self.event_bus = get_event_bus()
-        self.mitre_client = get_mitre_client("enterprise")
+        self._mitre_client = None
+
+    @property
+    def mitre_client(self):
+        """Lazy initialization of MITRE client."""
+        if self._mitre_client is None:
+            self._mitre_client = get_mitre_client("enterprise")
+        return self._mitre_client
 
     async def analyze_threats(
         self, target: str, include_predictions: bool = True
@@ -246,9 +253,9 @@ class ThreatProphet:
 
         # Análise baseada nos indicadores encontrados
         for indicator in analysis.indicators:
-            if "phishing" in indicator.tags:
+            if any("phishing" in tag for tag in indicator.tags):
                 vectors.append(AttackVector.SOCIAL_ENGINEERING)
-            if "credential" in indicator.tags:
+            if any("credential" in tag for tag in indicator.tags):
                 vectors.append(AttackVector.CREDENTIALS)
 
         # Remove duplicatas
