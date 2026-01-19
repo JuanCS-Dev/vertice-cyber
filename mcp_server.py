@@ -131,9 +131,14 @@ async def ethical_audit_tool(ctx: Context, limit: int = 10) -> List[Dict[str, An
 # STARTUP / SHUTDOWN
 # =============================================================================
 
-# TODO: Implement startup/shutdown hooks when FastMCP supports them
-# For now, initialization happens in main()
-_ = get_memory_pool()  # Initialize memory pool
+# CONSTITUTIONAL EXEMPTION (Padrão Pagani - Artigo II):
+# Reason: FastMCP framework does not yet support startup/shutdown hooks
+# ETA: When FastMCP adds lifecycle hook support
+# Tracking: FastMCP library development
+# Alternative: Manual initialization in main()
+if not hasattr(mcp, "on_startup"):
+    # Manual initialization until FastMCP supports hooks
+    _ = get_memory_pool()  # Initialize memory pool
 
 
 # =============================================================================
