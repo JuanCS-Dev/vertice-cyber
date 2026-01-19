@@ -231,7 +231,7 @@ class TestMagistrateTools:
     @pytest.mark.asyncio
     async def test_ethical_validate_tool_safe_action(self, mock_ctx):
         """Test ethical_validate tool with safe action."""
-        result = await ethical_validate(mock_ctx, "read file", {}, "user")
+        result = await ethical_validate(mock_ctx, "read file", {})
 
         assert result["decision_type"] == "approved"
         assert result["is_approved"] is True
@@ -240,7 +240,7 @@ class TestMagistrateTools:
     @pytest.mark.asyncio
     async def test_ethical_validate_tool_dangerous_action(self, mock_ctx):
         """Test ethical_validate tool with dangerous action."""
-        result = await ethical_validate(mock_ctx, "exploit vulnerability", {}, "user")
+        result = await ethical_validate(mock_ctx, "exploit vulnerability", {})
 
         assert result["decision_type"] == "requires_human_review"
         assert result["is_approved"] is False
