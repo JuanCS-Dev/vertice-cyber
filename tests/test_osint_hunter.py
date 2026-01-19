@@ -1,200 +1,216 @@
-    async def test_compliance_report_multiple_frameworks(self, guardian):
-        """Test compliance report with multiple frameworks."""
-        from tools.compliance.tools import compliance_report
+"""
+Test OSINT Hunter
+Testes para OSINT Hunter e funcionalidades relacionadas.
+"""
 
-        ctx = MagicMock()
-        frameworks = ["gdpr", "hipaa"]
-        result = await compliance_report(ctx, "test-system", frameworks)
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
-        assert isinstance(result, dict)
-        assert "target" in result
-        assert "frameworks_assessed" in result
-        assert "overall_score" in result
-        assert "assessments" in result
+from tools.osint import (
+    get_osint_hunter,
+    OSINTHunter,
+    InvestigationDepth,
+    OSINTFinding,
+    BreachInfo,
+)
 
-    @pytest.mark.asyncio
-    async def test_compliance_check_specific_requirement(self, guardian):
-        """Test compliance check for specific requirement."""
-        from tools.compliance.tools import compliance_check
 
-        ctx = MagicMock()
-        result = await compliance_check(ctx, "GDPR-ART6", "test-system")
+class TestOSINTHunter:
+    """Test OSINT Hunter functionality."""
 
-        assert isinstance(result, dict)
-        assert "requirement_id" in result
-        assert "status" in result
+    @pytest.fixture
+    def hunter(self):
+        """Create OSINT hunter instance."""
+        return OSINTHunter()
 
-    def test_osint_hunter_singleton(self):
+    @pytest.fixture
+    async def hunter_async(self):
+        """Create OSINT hunter instance for async tests."""
+        return await get_osint_hunter()
+
+    def test_singleton(self):
         """Test OSINT Hunter singleton pattern."""
-        from tools.osint import get_osint_hunter
-
         hunter1 = get_osint_hunter()
         hunter2 = get_osint_hunter()
         assert hunter1 is hunter2
 
-    def test_osint_hunter_initialization(self):
+    def test_initialization(self, hunter):
         """Test OSINT Hunter initialization."""
-        from tools.osint import OSINTHunter
-
-        hunter = OSINTHunter()
         assert hunter.settings is not None
         assert hunter.memory is not None
         assert hunter.event_bus is not None
 
-    def test_osint_result_creation(self):
-        """Test OSINT result creation."""
-        from tools.osint import OSINTResult, InvestigationDepth
+    @pytest.mark.asyncio
+    async def test_investigate_basic(self, hunter_async):
+        """Test basic investigation."""
+        # Mock httpx to avoid real HTTP calls
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = MagicMock()
+            mock_response.text = "Test content"
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
-        result = OSINTResult(target="test.com", depth=InvestigationDepth.BASIC)
-        assert result.target == "test.com"
-        assert result.depth == InvestigationDepth.BASIC
-        assert result.risk_score == 0.0
-        assert result.findings == []
-        assert result.breaches == []
+            result = await hunter_async.investigate(
+                "example.com", InvestigationDepth.BASIC
+            )
 
-    def test_osint_finding_creation(self):
-        """Test OSINT finding creation."""
-        from tools.osint import OSINTFinding
-
-        finding = OSINTFinding(
-            source="test",
-            finding_type="breach",
-            severity="medium",
-            data={"test": "data"},
-            confidence=0.8,
-        )
-        assert finding.source == "test"
-        assert finding.finding_type == "breach"
-        assert finding.severity == "medium"
-        assert finding.confidence == 0.8
+            assert result["target"] == "example.com"
+            assert result["depth"] == InvestigationDepth.BASIC
+            assert "findings" in result
+            assert "breaches" in result
+            assert "risk_score" in result
 
     @pytest.mark.asyncio
-    async def test_threat_calculate_overall_risk(self, prophet):
-        """Test threat risk calculation."""
-        from tools.threat import (
-            ThreatAnalysis,
-            ThreatIndicator,
-            ThreatPrediction,
-            ThreatLevel,
-        )
+    async def test_investigate_comprehensive(self, hunter_async):
+        """Test comprehensive investigation."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = MagicMock()
+            mock_response.text = "Malicious site detected"
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
-        # Create test analysis
-        analysis = ThreatAnalysis(
-            target="test.com",
-            indicators=[
-                ThreatIndicator(
-                    indicator_type="domain",
-                    value="test.com",
-                    confidence=0.8,
-                    first_seen="2024-01-01",
-                    last_seen="2024-01-02",
-                    tags=["suspicious"],
-                )
-            ],
-            techniques=[],  # Mock techniques
-            predictions=[
-                ThreatPrediction(
-                    target="test.com",
-                    predicted_threats=["Phishing"],
-                    confidence_score=0.8,
-                    risk_level=ThreatLevel.HIGH,
-                    recommended_actions=["Monitor domain"],
-                    time_horizon="short_term",
-                )
-            ],
-        )
+            result = await hunter_async.investigate(
+                "malicious-site.com", InvestigationDepth.DEEP
+            )
 
-        risk_score = prophet._calculate_overall_risk(analysis)
-        assert isinstance(risk_score, float)
-        assert risk_score >= 0
-        assert risk_score <= 100
+            assert result["target"] == "malicious-site.com"
+            assert result["depth"] == InvestigationDepth.DEEP
+            assert result["risk_score"] >= 0
 
     @pytest.mark.asyncio
-    async def test_threat_identify_attack_vectors(self, prophet):
-        """Test attack vector identification."""
-        from tools.threat import ThreatAnalysis, ThreatIndicator
+    async def test_breach_check_found(self, hunter_async):
+        """Test breach check when breach is found."""
+        with patch("httpx.AsyncClient") as mock_client:
+            # Mock HaveIBeenPwned API response
+            mock_response = MagicMock()
+            mock_response.json = AsyncMock(
+                return_value=[
+                    {"Name": "TestBreach", "Title": "Test Breach", "Domain": "test.com"}
+                ]
+            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
-        analysis = ThreatAnalysis(
-            target="test@example.com",
-            indicators=[
-                ThreatIndicator(
-                    indicator_type="email",
-                    value="test@example.com",
-                    confidence=0.8,
-                    first_seen="2024-01-01",
-                    last_seen="2024-01-02",
-                    tags=["phishing", "credential_stuffing"],
-                )
-            ],
-            techniques=[],
-            predictions=[],
-        )
+            result = await hunter_async.breach_check("test@example.com")
 
-        vectors = prophet._identify_attack_vectors(analysis)
-        assert isinstance(vectors, list)
-        assert len(vectors) > 0  # Should identify social engineering
+            assert isinstance(result, dict)
+            assert "breaches" in result
 
     @pytest.mark.asyncio
-    async def test_compliance_calculate_score(self, guardian):
-        """Test compliance score calculation."""
-        from tools.compliance import (
-            ComplianceCheck,
-            ComplianceRequirement,
-            ComplianceFramework,
-            ComplianceStatus,
-        )
+    async def test_breach_check_not_found(self, hunter_async):
+        """Test breach check when no breach is found."""
+        with patch("httpx.AsyncClient") as mock_client:
+            # Mock empty response
+            mock_response = MagicMock()
+            mock_response.json = AsyncMock(return_value=[])
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
-        checks = [
-            ComplianceCheck(
-                requirement=ComplianceRequirement(
-                    requirement_id="TEST-1",
-                    title="Test Control",
-                    description="Test description",
-                    framework=ComplianceFramework.GDPR,
-                    category="test",
-                    severity="high",
-                ),
-                status=ComplianceStatus.COMPLIANT,
-                score=100.0,
+            result = await hunter_async.breach_check("clean@example.com")
+
+            assert isinstance(result, dict)
+            assert "breaches" in result
+
+    @pytest.mark.asyncio
+    async def test_google_dork_generation(self, hunter_async):
+        """Test Google dork generation."""
+        result = await hunter_async.google_dork("example.com")
+
+        assert isinstance(result, dict)
+        assert "domain" in result
+        assert "dorks" in result
+        assert len(result["dorks"]) > 0
+
+        # Verify dork structure
+        for dork in result["dorks"]:
+            assert "category" in dork
+            assert "dork" in dork
+            assert "description" in dork
+
+    def test_risk_calculation_no_findings(self, hunter):
+        """Test risk calculation with no findings."""
+        result = OSINTResult(target="safe.com", depth=InvestigationDepth.BASIC)
+        risk = hunter._calculate_risk(result)
+        assert risk == 0
+
+    def test_risk_calculation_with_findings(self, hunter):
+        """Test risk calculation with findings and breaches."""
+        result = OSINTResult(target="risky.com", depth=InvestigationDepth.BASIC)
+
+        # Add findings
+        result.findings = [
+            OSINTFinding(
+                source="test",
+                finding_type="breach",
+                severity="high",
+                data={"breach": "found"},
+                confidence=0.9,
             ),
-            ComplianceCheck(
-                requirement=ComplianceRequirement(
-                    requirement_id="TEST-2",
-                    title="Test Control 2",
-                    description="Test description 2",
-                    framework=ComplianceFramework.GDPR,
-                    category="test",
-                    severity="medium",
-                ),
-                status=ComplianceStatus.PARTIALLY_COMPLIANT,
-                score=60.0,
+            OSINTFinding(
+                source="test",
+                finding_type="malware",
+                severity="medium",
+                data={"malware": "detected"},
+                confidence=0.7,
             ),
         ]
 
-        score = guardian._calculate_compliance_score(checks)
-        assert isinstance(score, float)
-        assert 0 <= score <= 100
-        # Should be weighted average: (100*3 + 60*2) / (3+2) = 82.0
-        assert abs(score - 82.0) < 1.0
+        # Add breaches
+        result.breaches = [
+            BreachInfo(
+                name="Breach1",
+                date="2024-01-01",
+                data_classes=["emails"],
+                is_verified=True,
+            ),
+            BreachInfo(
+                name="Breach2",
+                date="2024-02-01",
+                data_classes=["passwords"],
+                is_verified=False,
+            ),
+        ]
 
-    @pytest.mark.asyncio
-    async def test_compliance_identify_critical_violations(self, guardian):
-        """Test critical violations identification."""
-        from tools.compliance import (
-            ComplianceCheck,
-            ComplianceRequirement,
-            ComplianceFramework,
-            ComplianceStatus,
+        risk = hunter._calculate_risk(result)
+        assert risk > 0
+        assert risk <= 100
+
+    def test_osint_finding_creation(self):
+        """Test OSINT finding model creation."""
+        finding = OSINTFinding(
+            source="test_source",
+            finding_type="breach",
+            severity="high",
+            data={"key": "value"},
+            confidence=0.85,
         )
 
-        checks = [
-            ComplianceCheck(
-                requirement=ComplianceRequirement(
-                    requirement_id="CRITICAL-1",
-                    title="Critical Control",
-                    description="Critical test",
-                    framework=ComplianceFramework.GDPR,
-                    category="security",
-                    severity="critical",
-                ),
-                status=ComplianceStatus.NON_COMPLIANT,
+        assert finding.source == "test_source"
+        assert finding.finding_type == "breach"
+        assert finding.severity == "high"
+        assert finding.data == {"key": "value"}
+        assert finding.confidence == 0.85
+
+    def test_breach_info_creation(self):
+        """Test breach info model creation."""
+        breach = BreachInfo(
+            name="Test Breach",
+            date="2024-01-15",
+            data_classes=["emails", "passwords"],
+            is_verified=True,
+        )
+
+        assert breach.name == "Test Breach"
+        assert breach.date == "2024-01-15"
+        assert breach.data_classes == ["emails", "passwords"]
+        assert breach.is_verified is True
+
+    def test_investigation_depth_enum(self):
+        """Test investigation depth enum values."""
+        assert InvestigationDepth.BASIC == "basic"
+        assert InvestigationDepth.DEEP == "deep"
+        assert InvestigationDepth.EXHAUSTIVE == "exhaustive"

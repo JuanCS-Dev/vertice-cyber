@@ -13,7 +13,7 @@ class TestThreatProphet:
     """Test Threat Prophet functionality."""
 
     @pytest.fixture
-    async def prophet(self):
+    def prophet(self):
         """Create prophet instance for testing."""
         # Mock the MITRE client before creating ThreatProphet
         mock_mitre_client = MagicMock()
@@ -32,22 +32,23 @@ class TestThreatProphet:
         )
 
         with patch("tools.threat.get_mitre_client", return_value=mock_mitre_client):
-            prophet = await get_threat_prophet()
+            from tools.threat import ThreatProphet
+
+            prophet = ThreatProphet()
             # Mock other dependencies
             prophet.memory = MagicMock()
             prophet.event_bus = MagicMock()
             prophet.event_bus.emit = AsyncMock()
-            yield prophet
+            return prophet
 
-    @pytest.mark.asyncio
-    async def test_singleton(self):
+    def test_singleton(self):
         """Test Threat Prophet singleton."""
         mock_mitre_client = MagicMock()
         mock_mitre_client.search_techniques = AsyncMock(return_value=[])
 
         with patch("tools.threat.get_mitre_client", return_value=mock_mitre_client):
-            p1 = await get_threat_prophet()
-            p2 = await get_threat_prophet()
+            p1 = get_threat_prophet()
+            p2 = get_threat_prophet()
             assert p1 is p2
 
     @pytest.mark.asyncio

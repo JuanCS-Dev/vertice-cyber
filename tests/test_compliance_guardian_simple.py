@@ -13,7 +13,7 @@ class TestComplianceGuardian:
     """Test Compliance Guardian functionality."""
 
     @pytest.fixture
-    async def guardian(self):
+    def guardian(self):
         """Create guardian instance for testing."""
         # Mock the compliance API before creating ComplianceGuardian
         mock_api = MagicMock()
@@ -34,15 +34,16 @@ class TestComplianceGuardian:
         with patch(
             "tools.compliance.guardian.get_compliance_api", return_value=mock_api
         ):
-            guardian = await get_compliance_guardian()
+            from tools.compliance.guardian import ComplianceGuardian
+
+            guardian = ComplianceGuardian()
             # Mock other dependencies
             guardian.memory = MagicMock()
             guardian.event_bus = MagicMock()
             guardian.event_bus.emit = AsyncMock()
-            yield guardian
+            return guardian
 
-    @pytest.mark.asyncio
-    async def test_singleton(self):
+    def test_singleton(self):
         """Test Compliance Guardian singleton."""
         mock_api = MagicMock()
         mock_api.get_controls_by_framework = AsyncMock(return_value=[])
@@ -50,8 +51,8 @@ class TestComplianceGuardian:
         with patch(
             "tools.compliance.guardian.get_compliance_api", return_value=mock_api
         ):
-            g1 = await get_compliance_guardian()
-            g2 = await get_compliance_guardian()
+            g1 = get_compliance_guardian()
+            g2 = get_compliance_guardian()
             assert g1 is g2
 
     @pytest.mark.asyncio

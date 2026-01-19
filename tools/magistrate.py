@@ -7,7 +7,6 @@ import time
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from .fastmcp_compat import get_fastmcp_context
 from pydantic import BaseModel, Field
 
 from core.settings import get_settings
@@ -296,7 +295,7 @@ async def ethical_validate(
     ctx.info(f"Validating action: {action[:50]}...")
 
     magistrate = get_magistrate()
-    decision = await magistrate.validate(action, context or {}, actor)
+    decision = await magistrate.validate(action, context or {}, "system")
 
     ctx.info(f"Decision: {decision.decision_type.value}")
 

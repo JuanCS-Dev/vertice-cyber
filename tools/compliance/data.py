@@ -4,7 +4,7 @@ Dados oficiais dos frameworks de conformidade regulatória.
 """
 
 from typing import List
-from .models import ComplianceFramework, ComplianceControl, ComplianceFrameworkData
+from .models import ComplianceControl, ComplianceFrameworkData
 
 
 # NIST Cybersecurity Framework 2.0

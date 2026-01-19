@@ -11,7 +11,6 @@ import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from .fastmcp_compat import get_fastmcp_context
 from pydantic import BaseModel, Field
 
 from core.settings import get_settings

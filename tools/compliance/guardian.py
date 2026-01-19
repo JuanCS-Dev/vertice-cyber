@@ -4,7 +4,6 @@ Verificação automática de conformidade com regulamentações de segurança.
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from core.settings import get_settings
