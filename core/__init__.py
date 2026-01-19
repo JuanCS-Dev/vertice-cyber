@@ -1,17 +1,22 @@
-# Vertice Cyber - Core Module
 """
-Core utilities for Vertice Cyber MCP Tools.
-
-Modules:
-- settings.py: Pydantic Settings management
-- event_bus.py: Async event bus for tool communication
-- memory.py: Per-agent memory pool
+Vertice Cyber Core Package
+Foundation components for MCP-based meta-agents.
 """
 
-from typing import Any, Dict
-import logging
+from .settings import Settings, get_settings, settings
+from .event_bus import EventBus, EventType, Event, get_event_bus
+from .memory import MemoryPool, AgentMemory, get_memory_pool, get_agent_memory
 
-logger = logging.getLogger(__name__)
-
-# Version
-__version__ = "2.0.0"
+__all__ = [
+    "Settings",
+    "get_settings",
+    "settings",
+    "EventBus",
+    "EventType",
+    "Event",
+    "get_event_bus",
+    "MemoryPool",
+    "AgentMemory",
+    "get_memory_pool",
+    "get_agent_memory",
+]
