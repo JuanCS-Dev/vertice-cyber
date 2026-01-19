@@ -77,13 +77,6 @@ class EthicalMagistrate:
         start_time = time.time()
         decision_id = f"decision_{int(time.time() * 1000)}"
 
-        # Emite evento de início
-        await self.event_bus.emit(
-            EventType.ETHICS_VALIDATION_REQUESTED,
-            {"action": action, "actor": actor},
-            source="magistrate",
-        )
-
         result = EthicalDecision(
             decision_id=decision_id,
             decision_type=DecisionType.ERROR,
@@ -93,6 +86,12 @@ class EthicalMagistrate:
         )
 
         try:
+            # Emite evento de início
+            await self.event_bus.emit(
+                EventType.ETHICS_VALIDATION_REQUESTED,
+                {"action": action, "actor": actor},
+                source="magistrate",
+            )
             # Phase 1: Governance check
             if self._is_dangerous(action):
                 result.decision_type = DecisionType.REQUIRES_HUMAN_REVIEW
@@ -115,8 +114,34 @@ class EthicalMagistrate:
                 result.conditions.append("PII must be masked in logs")
                 return self._finalize(result, start_time)
 
-            # Phase 4-7: Additional checks (simplificado por ora)
-            # TODO: Implementar fairness, transparency, accountability, security
+            # Phase 4: Fairness check - ensure no discrimination
+            if not self._check_fairness(action, context):
+                result.decision_type = DecisionType.REJECTED_BY_ETHICS
+                result.conditions.append("Action may introduce unfair bias")
+                result.reasoning = "Fairness check failed"
+                return self._finalize(result, start_time)
+
+            # Phase 5: Transparency check - ensure explainability
+            if not self._check_transparency(action, context):
+                result.decision_type = DecisionType.APPROVED_WITH_CONDITIONS
+                result.conditions.append("Enhanced logging required for transparency")
+                result.conditions.append("Audit trail must be maintained")
+                return self._finalize(result, start_time)
+
+            # Phase 6: Accountability check - ensure responsibility
+            if not self._check_accountability(action, context):
+                result.decision_type = DecisionType.REQUIRES_HUMAN_REVIEW
+                result.conditions.append("Human accountability required")
+                result.reasoning = "Accountability check requires human oversight"
+                await self._emit_human_review(action, actor)
+                return self._finalize(result, start_time)
+
+            # Phase 7: Security check - final security validation
+            if not self._check_security(action, context):
+                result.decision_type = DecisionType.REJECTED_BY_GOVERNANCE
+                result.conditions.append("Security vulnerability detected")
+                result.reasoning = "Security check failed"
+                return self._finalize(result, start_time)
 
             # Default: Approved
             result.decision_type = DecisionType.APPROVED
@@ -155,6 +180,79 @@ class EthicalMagistrate:
             {"action": action, "actor": actor},
             source="magistrate",
         )
+
+    def _check_fairness(self, action: str, context: Dict[str, Any]) -> bool:
+        """Verifica se ação não introduz viés ou discriminação."""
+        # Check for potentially discriminatory keywords
+        fairness_keywords = ["bias", "discriminate", "exclude", "favor", "unfair"]
+        action_lower = action.lower()
+
+        has_discriminatory_terms = any(kw in action_lower for kw in fairness_keywords)
+
+        # If action involves data processing, ensure fairness considerations
+        if context.get("involves_data_processing"):
+            return not has_discriminatory_terms
+
+        # Even for non-data processing, flag discriminatory actions
+        return not has_discriminatory_terms
+
+    def _check_transparency(self, action: str, context: Dict[str, Any]) -> bool:
+        """Verifica se ação pode ser explicada e auditada."""
+        # Actions requiring high transparency
+        high_risk_actions = [
+            "deploy",
+            "modify_system",
+            "access_sensitive_data",
+            "critical",
+        ]
+
+        action_lower = action.lower()
+        is_high_risk = any(risk in action_lower for risk in high_risk_actions)
+
+        # High risk actions require explicit transparency measures
+        if is_high_risk and not context.get("transparency_measures"):
+            return False
+
+        return True
+
+    def _check_accountability(self, action: str, context: Dict[str, Any]) -> bool:
+        """Verifica se há responsabilidade clara pela ação."""
+        # Actions requiring human accountability
+        critical_actions = [
+            "delete_permanent",
+            "modify_critical_system",
+            "access_confidential",
+            "make_decision_impact_users",
+            "delete permanent",
+            "modify critical",
+            "permanent data",
+        ]
+
+        action_lower = action.lower()
+        is_critical = any(critical in action_lower for critical in critical_actions)
+
+        # Critical actions always require human review
+        if is_critical:
+            return False  # Forces REQUIRES_HUMAN_REVIEW
+
+        return True
+
+    def _check_security(self, action: str, context: Dict[str, Any]) -> bool:
+        """Verifica se ação não apresenta vulnerabilidades de segurança."""
+        # Security-sensitive keywords that might indicate vulnerabilities
+        security_risks = [
+            "eval(",
+            "exec(",
+            "pickle",
+            "subprocess",
+            "shell=true",
+            "dangerous_function",
+        ]
+
+        action_lower = action.lower()
+        has_security_risk = any(risk in action_lower for risk in security_risks)
+
+        return not has_security_risk
 
     async def get_decision_history(self, limit: int = 10) -> List[Dict]:
         """Retorna histórico de decisões."""

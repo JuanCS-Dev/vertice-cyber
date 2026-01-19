@@ -115,6 +115,108 @@ class TestEthicalMagistrate:
         assert history[0]["action"] == "test1"
         magistrate.event_bus.get_history.assert_called_once()
 
+    def test_check_fairness_pass(self, magistrate):
+        """Test fairness check passes for neutral actions."""
+        assert magistrate._check_fairness("read file", {}) is True
+        assert (
+            magistrate._check_fairness(
+                "process data", {"involves_data_processing": True}
+            )
+            is True
+        )
+
+    def test_check_fairness_fail(self, magistrate):
+        """Test fairness check fails for discriminatory actions."""
+        assert magistrate._check_fairness("bias against users", {}) is False
+        assert (
+            magistrate._check_fairness(
+                "discriminate data", {"involves_data_processing": True}
+            )
+            is False
+        )
+
+    def test_check_transparency_pass(self, magistrate):
+        """Test transparency check passes."""
+        assert magistrate._check_transparency("read file", {}) is True
+        assert (
+            magistrate._check_transparency(
+                "deploy system", {"transparency_measures": True}
+            )
+            is True
+        )
+
+    def test_check_transparency_fail(self, magistrate):
+        """Test transparency check fails for high-risk actions without measures."""
+        assert magistrate._check_transparency("deploy system", {}) is False
+        assert magistrate._check_transparency("modify critical system", {}) is False
+
+    def test_check_accountability_pass(self, magistrate):
+        """Test accountability check passes for non-critical actions."""
+        assert magistrate._check_accountability("read file", {}) is True
+        assert magistrate._check_accountability("update config", {}) is True
+
+    def test_check_accountability_fail(self, magistrate):
+        """Test accountability check fails for critical actions."""
+        assert magistrate._check_accountability("delete permanent", {}) is False
+        assert magistrate._check_accountability("modify critical system", {}) is False
+
+    def test_check_security_pass(self, magistrate):
+        """Test security check passes for safe actions."""
+        assert magistrate._check_security("read file", {}) is True
+        assert magistrate._check_security("process data", {}) is True
+
+    def test_check_security_fail(self, magistrate):
+        """Test security check fails for dangerous actions."""
+        assert magistrate._check_security("eval(malicious_code)", {}) is False
+        assert magistrate._check_security("exec(dangerous)", {}) is False
+        assert magistrate._check_security("subprocess.call", {}) is False
+
+    @pytest.mark.asyncio
+    async def test_validate_fairness_check_fails(self, magistrate):
+        """Test validation fails on fairness check."""
+        result = await magistrate.validate(
+            "bias against users", {"involves_data_processing": True}, "user"
+        )
+
+        assert result.decision_type == DecisionType.REJECTED_BY_ETHICS
+        assert "fairness" in result.reasoning.lower()
+
+    @pytest.mark.asyncio
+    async def test_validate_transparency_requires_conditions(self, magistrate):
+        """Test validation adds transparency conditions."""
+        result = await magistrate.validate("deploy critical system", {}, "user")
+
+        assert result.decision_type == DecisionType.APPROVED_WITH_CONDITIONS
+        assert any("transparency" in cond.lower() for cond in result.conditions)
+        assert any("audit" in cond.lower() for cond in result.conditions)
+
+    @pytest.mark.asyncio
+    async def test_validate_accountability_requires_human_review(self, magistrate):
+        """Test critical actions require human review."""
+        result = await magistrate.validate("delete permanent data", {}, "user")
+
+        assert result.decision_type == DecisionType.REQUIRES_HUMAN_REVIEW
+        assert "accountability" in result.reasoning.lower()
+
+    @pytest.mark.asyncio
+    async def test_validate_security_fails(self, magistrate):
+        """Test validation fails on security check."""
+        result = await magistrate.validate("exec(malicious)", {}, "user")
+
+        assert result.decision_type == DecisionType.REJECTED_BY_GOVERNANCE
+        assert "security" in result.reasoning.lower()
+
+    @pytest.mark.asyncio
+    async def test_validate_handles_exceptions(self, magistrate):
+        """Test validation handles exceptions gracefully."""
+        # Make event_bus.emit raise an exception
+        magistrate.event_bus.emit.side_effect = Exception("Test exception")
+
+        result = await magistrate.validate("safe action", {}, "user")
+
+        assert result.decision_type == DecisionType.ERROR
+        assert "Validation error: Test exception" in result.rejection_reasons[0]
+
 
 class TestMagistrateTools:
     """Test MCP tool functions."""
