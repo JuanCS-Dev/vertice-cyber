@@ -7,7 +7,7 @@ import time
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from fastmcp import Context
+from .fastmcp_compat import get_fastmcp_context
 from pydantic import BaseModel, Field
 
 from core.settings import get_settings
@@ -280,10 +280,7 @@ def get_magistrate() -> EthicalMagistrate:
 
 
 async def ethical_validate(
-    ctx: Context,
-    action: str,
-    context: Optional[Dict[str, Any]] = None,
-    actor: str = "user",
+    ctx, action: str, context: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Valida uma ação contra o framework ético de 7 fases.
@@ -306,7 +303,7 @@ async def ethical_validate(
     return decision.model_dump()
 
 
-async def ethical_audit(ctx: Context, limit: int = 10) -> List[Dict[str, Any]]:
+async def ethical_audit(ctx, limit: int = 10) -> List[Dict[str, Any]]:
     """
     Retorna histórico de decisões éticas.
 

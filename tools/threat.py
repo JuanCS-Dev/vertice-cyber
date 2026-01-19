@@ -11,7 +11,7 @@ import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from fastmcp import Context
+from .fastmcp_compat import get_fastmcp_context
 from pydantic import BaseModel, Field
 
 from core.settings import get_settings
@@ -312,7 +312,7 @@ def get_threat_prophet() -> ThreatProphet:
 
 
 async def threat_analyze(
-    ctx: Context, target: str, include_predictions: bool = True
+    ctx, target: str, include_predictions: bool = True
 ) -> Dict[str, Any]:
     """
     Executa análise completa de ameaças para um alvo.
@@ -334,7 +334,7 @@ async def threat_analyze(
     return analysis.model_dump()
 
 
-async def threat_intelligence(ctx: Context, query: str) -> Dict[str, Any]:
+async def threat_intelligence(ctx, query: str) -> Dict[str, Any]:
     """
     Busca inteligência de ameaças usando MITRE ATT&CK.
 
@@ -354,7 +354,7 @@ async def threat_intelligence(ctx: Context, query: str) -> Dict[str, Any]:
     return results
 
 
-async def threat_predict(ctx: Context, target: str) -> Dict[str, Any]:
+async def threat_predict(ctx, target: str) -> Dict[str, Any]:
     """
     Gera predições de ameaças futuras para um alvo.
 
