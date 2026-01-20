@@ -4,15 +4,10 @@ Ferramentas MCP específicas para integração com Vertex AI.
 """
 
 from typing import Any, Dict, List
-from fastmcp import FastMCP, Context
+from fastmcp import Context
 
 from tools.vertex_ai import get_vertex_ai
 
-# Create MCP instance for AI tools
-mcp = FastMCP(name="vertice-ai-tools", version="1.0.0")
-
-
-@mcp.tool()
 async def ai_threat_analysis(
     ctx: Context,
     target: str,
@@ -46,7 +41,6 @@ async def ai_threat_analysis(
     return result
 
 
-@mcp.tool()
 async def ai_compliance_assessment(
     ctx: Context, target: str, framework: str, current_state: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -73,7 +67,6 @@ async def ai_compliance_assessment(
     return result
 
 
-@mcp.tool()
 async def ai_osint_analysis(
     ctx: Context,
     target: str,
@@ -106,7 +99,6 @@ async def ai_osint_analysis(
     return result
 
 
-@mcp.tool()
 async def ai_stream_analysis(
     ctx: Context,
     analysis_type: str,
@@ -143,7 +135,6 @@ async def ai_stream_analysis(
     return full_response
 
 
-@mcp.tool()
 async def ai_integrated_assessment(
     ctx: Context, target: str, assessment_scope: str = "full"
 ) -> Dict[str, Any]:

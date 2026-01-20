@@ -15,6 +15,8 @@ from tools.magistrate import ethical_validate
 from tools.osint import osint_investigate, osint_breach_check, osint_google_dork
 from tools.threat import threat_analyze, threat_intelligence, threat_predict
 from tools.compliance import compliance_assess, compliance_report, compliance_check
+from tools.wargame import wargame_list_scenarios, wargame_run_simulation
+from tools.patch_ml import patch_validate
 from tools.mcp_ai_tools import (
     ai_threat_analysis,
     ai_compliance_assessment,
@@ -68,6 +70,10 @@ async def get_agents_list() -> str:
 
 ## Ethical Governance
 - **Magistrate**: Validação ética e auditoria constitucional
+
+## Offensive Security
+- **Wargame Executor**: Simulação de ataques e validação de defesas
+- **Patch Validator ML**: Análise preditiva de risco em código
 
 ## AI-Powered (Vertex AI)
 - **AI Threat Analysis**: Análise inteligente de ameaças
@@ -174,6 +180,39 @@ async def ethical_validate_tool(
 
 
 # =============================================================================
+# OFFENSIVE TOOLS (Phase 4)
+# =============================================================================
+
+
+@mcp.tool()
+async def wargame_list_scenarios_tool(ctx: Context) -> List[Dict[str, Any]]:
+    """Lista cenários de ataque simulados disponíveis."""
+    result = await wargame_list_scenarios(ctx)
+    await ctx.info("Listed wargame scenarios")
+    return result
+
+
+@mcp.tool()
+async def wargame_run_simulation_tool(
+    ctx: Context, scenario_id: str, target: str = "local"
+) -> Dict[str, Any]:
+    """Executa uma simulação de ataque (Wargame)."""
+    result = await wargame_run_simulation(ctx, scenario_id, target)
+    await ctx.info(f"Wargame simulation {scenario_id} completed")
+    return result
+
+
+@mcp.tool()
+async def patch_validate_tool(
+    ctx: Context, diff_content: str, language: str = "python"
+) -> Dict[str, Any]:
+    """Valida um patch de código quanto a riscos de segurança."""
+    result = await patch_validate(ctx, diff_content, language)
+    await ctx.info("Patch validation completed")
+    return result
+
+
+# =============================================================================
 # AI TOOLS (Vertex AI)
 # =============================================================================
 
@@ -222,6 +261,9 @@ def main():
         print("  ✅ compliance_assess_tool")
         print("  ✅ compliance_report_tool")
         print("  ✅ compliance_check_tool")
+        print("  ✅ wargame_list_scenarios_tool")
+        print("  ✅ wargame_run_simulation_tool")
+        print("  ✅ patch_validate_tool")
         print("  ✅ ai_threat_analysis")
         print("  ✅ ai_compliance_assessment")
         print("  ✅ ai_osint_analysis")

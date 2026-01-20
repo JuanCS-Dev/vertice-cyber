@@ -37,6 +37,14 @@ class EventType(str, Enum):
     IMMUNE_RESPONSE_TRIGGERED = "immune.response.triggered"
     IMMUNE_ANTIBODY_DEPLOYED = "immune.antibody.deployed"
 
+    # Offensive - Wargame
+    WARGAME_SIMULATION_STARTED = "wargame.simulation.started"
+    WARGAME_SIMULATION_COMPLETED = "wargame.simulation.completed"
+
+    # Offensive - Patch ML
+    PATCH_VALIDATION_REQUESTED = "patch.validation.requested"
+    PATCH_VALIDATION_COMPLETED = "patch.validation.completed"
+
     # System
     SYSTEM_HEALTH_CHECK = "system.health.check"
     SYSTEM_ERROR = "system.error"
