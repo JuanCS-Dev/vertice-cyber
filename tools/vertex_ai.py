@@ -1,6 +1,9 @@
 """
-Vertex AI Integration Module
-Integração com Google Cloud Vertex AI para inferência de IA.
+Vertex AI Integration Module - Gemini 3 Pro Preview
+Integração com Google Cloud Vertex AI usando google-genai SDK.
+
+IMPORTANTE: Este módulo usa APENAS Gemini 3 Pro Preview.
+NÃO FAÇA DOWNGRADE para Gemini 2 ou 1.
 """
 
 import os
@@ -8,136 +11,120 @@ import json
 import logging
 from typing import Dict, List, Optional, Any, AsyncGenerator
 from datetime import datetime
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
+
+from google import genai
+from google.genai import types
 
 from core.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Modelo padrão: Gemini 3 Pro Preview - NÃO ALTERAR
+DEFAULT_MODEL = "gemini-3-pro-preview"
+
 
 class VertexAIIntegration:
     """
     Integração com Google Cloud Vertex AI para análise inteligente.
+    Usa google-genai SDK com Gemini 3 Pro Preview.
     """
 
     def __init__(self) -> None:
         self.settings = get_settings()
-        self.project_id: Optional[str] = os.getenv(
-            "GCP_PROJECT_ID", self.settings.api_keys.gcp_project_id
+        self.project_id: str = os.getenv(
+            "GCP_PROJECT_ID", 
+            self.settings.api_keys.gcp_project_id or "vertice-ai"
         )
-        self.location: str = os.getenv(
-            "GCP_LOCATION", self.settings.api_keys.gcp_location or "global"
-        )
+        self.location: str = "global"  # Gemini 3 usa location=global
         self.model_name: str = os.getenv(
-            "VERTEX_MODEL", self.settings.api_keys.vertex_model or "gemini-1.5-pro-002"
+            "VERTEX_MODEL", 
+            self.settings.api_keys.vertex_model or DEFAULT_MODEL
         )
-        self._models: Dict[str, GenerativeModel] = {}
-
-        # Inicializar Vertex AI
-        if self.project_id:
-            vertexai.init(project=self.project_id, location=self.location)
-            logger.info(
-                f"Vertex AI initialized: project={self.project_id}, location={self.location}"
+        
+        # Força Gemini 3 se não estiver configurado
+        if "gemini-3" not in self.model_name:
+            logger.warning(f"Forcing Gemini 3 Pro Preview (was: {self.model_name})")
+            self.model_name = DEFAULT_MODEL
+        
+        # Inicializar client google-genai com Vertex AI
+        try:
+            self.client = genai.Client(
+                vertexai=True,
+                project=self.project_id,
+                location=self.location
             )
-        else:
-            logger.warning("GCP_PROJECT_ID not configured, Vertex AI not initialized")
+            logger.info(
+                f"Vertex AI initialized: project={self.project_id}, "
+                f"location={self.location}, model={self.model_name}"
+            )
+            self._initialized = True
+        except Exception as e:
+            logger.error(f"Failed to initialize Vertex AI client: {e}")
+            self.client = None
+            self._initialized = False
 
-        # Cache de modelos
-        self._models: Dict[str, GenerativeModel] = {}
-
-    def get_model(self, model_name: Optional[str] = None) -> GenerativeModel:
-        """Get or create a cached GenerativeModel instance."""
-        name = model_name or self.model_name
-        if name not in self._models:
-            # We use name as positional argument to match test expectations
-            self._models[name] = GenerativeModel(name)
-        return self._models[name]
+    def _ensure_initialized(self) -> bool:
+        """Check if client is initialized."""
+        if not self._initialized or self.client is None:
+            logger.error("Vertex AI client not initialized")
+            return False
+        return True
 
     async def analyze_threat_intelligence(
         self, query: str, context: Dict[str, Any], model_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Analyze threat intelligence using Vertex AI.
-
-        Args:
-            query: The analysis query
-            context: Context data including indicators, findings, etc.
-            model_name: Optional model override
-
-        Returns:
-            Analysis results with insights and recommendations
+        Analyze threat intelligence using Gemini 3 Pro Preview.
         """
-        model = self.get_model(model_name)
+        if not self._ensure_initialized():
+            return self._error_response("Vertex AI not initialized", query)
 
-        # Prepare context for analysis
+        model = model_name or self.model_name
         context_str = json.dumps(context, indent=2, default=str)
 
         prompt = f"""
-        Você é um especialista em inteligência de ameaças cibernéticas. Analise os dados fornecidos
-        e forneça insights acionáveis sobre ameaças potenciais.
+        Você é um especialista em inteligência de ameaças cibernéticas usando Gemini 3 Pro.
+        Analise os dados fornecidos e forneça insights acionáveis.
 
         Query de Análise: {query}
 
         Dados Contextuais:
         {context_str}
 
-        Forneça sua análise no formato JSON com as seguintes chaves:
-        - risk_level: "low", "medium", "high", "critical"
-        - confidence: número entre 0 e 1
-        - insights: lista de insights principais
-        - recommendations: lista de recomendações práticas
-        - indicators: indicadores de ameaça identificados
-        - summary: resumo executivo da análise
+        Responda APENAS com JSON válido (sem markdown):
+        {{
+            "risk_level": "low|medium|high|critical",
+            "confidence": 0.0-1.0,
+            "insights": ["insight1", "insight2"],
+            "recommendations": ["rec1", "rec2"],
+            "indicators": ["indicator1"],
+            "summary": "resumo executivo"
+        }}
         """
 
-        generation_config = GenerationConfig(
-            temperature=0.3,
-            top_p=0.8,
-            top_k=40,
-            max_output_tokens=2048,
-            response_mime_type="application/json",
-        )
-
         try:
-            response = await model.generate_content_async(
-                prompt, generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.3,
+                    top_p=0.8,
+                    max_output_tokens=2048,
+                    response_mime_type="application/json",
+                )
             )
 
-            # Parse JSON response
-            result_text = response.text.strip()
-            if result_text.startswith("```json"):
-                result_text = result_text[7:]
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-
-            result = json.loads(result_text)
-
-            # Add metadata
+            result = self._parse_json_response(response.text)
             result["timestamp"] = datetime.utcnow().isoformat()
-            result["model_used"] = model_name or self.model_name
+            result["model_used"] = model
             result["query"] = query
 
-            logger.info(
-                f"Threat intelligence analysis completed: risk_level={result.get('risk_level')}"
-            )
+            logger.info(f"Threat analysis completed: risk_level={result.get('risk_level')}")
             return result
 
         except Exception as e:
-            logger.error(f"Vertex AI analysis failed: {e}")
-            # Return fallback response
-            return {
-                "risk_level": "unknown",
-                "confidence": 0.0,
-                "insights": ["Analysis failed due to technical issues"],
-                "recommendations": ["Contact system administrator"],
-                "indicators": [],
-                "summary": f"Analysis failed: {str(e)}",
-                "timestamp": datetime.utcnow().isoformat(),
-                "model_used": model_name or self.model_name,
-                "query": query,
-                "error": str(e),
-            }
+            logger.error(f"Threat analysis failed: {e}")
+            return self._error_response(str(e), query)
 
     async def generate_compliance_report(
         self,
@@ -147,15 +134,17 @@ class VertexAIIntegration:
         model_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Generate compliance report using Vertex AI.
+        Generate compliance report using Gemini 3 Pro Preview.
         """
-        model = self.get_model(model_name)
+        if not self._ensure_initialized():
+            return self._compliance_error(target, framework, "Vertex AI not initialized")
 
+        model = model_name or self.model_name
         assessment_str = json.dumps(assessment_data, indent=2, default=str)
 
         prompt = f"""
-        Você é um especialista em conformidade regulatória. Gere um relatório executivo
-        de conformidade baseado nos dados de avaliação fornecidos.
+        Você é um especialista em conformidade regulatória usando Gemini 3 Pro.
+        Gere um relatório executivo de conformidade.
 
         Target: {target}
         Framework: {framework}
@@ -163,66 +152,42 @@ class VertexAIIntegration:
         Dados de Avaliação:
         {assessment_str}
 
-        Forneça o relatório no formato JSON com as seguintes chaves:
-        - executive_summary: resumo executivo (máximo 200 palavras)
-        - overall_compliance_score: número entre 0 e 100
-        - compliance_level: "non_compliant", "partially_compliant", "compliant", "exemplary"
-        - key_findings: lista de achados principais
-        - critical_violations: lista de violações críticas
-        - recommended_actions: lista de ações recomendadas
-        - next_steps: próximos passos imediatos
-        - compliance_trends: tendências observadas
+        Responda APENAS com JSON válido (sem markdown):
+        {{
+            "executive_summary": "resumo executivo",
+            "overall_compliance_score": 0-100,
+            "compliance_level": "non_compliant|partially_compliant|compliant|exemplary",
+            "key_findings": ["finding1", "finding2"],
+            "critical_violations": ["violation1"],
+            "recommended_actions": ["action1", "action2"],
+            "next_steps": ["step1", "step2"]
+        }}
         """
 
-        generation_config = GenerationConfig(
-            temperature=0.2,
-            top_p=0.9,
-            top_k=50,
-            max_output_tokens=3072,
-            response_mime_type="application/json",
-        )
-
         try:
-            response = await model.generate_content_async(
-                prompt, generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.2,
+                    top_p=0.9,
+                    max_output_tokens=3072,
+                    response_mime_type="application/json",
+                )
             )
 
-            result_text = response.text.strip()
-            if result_text.startswith("```json"):
-                result_text = result_text[7:]
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-
-            result = json.loads(result_text)
-
-            # Add metadata
+            result = self._parse_json_response(response.text)
             result["target"] = target
             result["framework"] = framework
             result["generated_at"] = datetime.utcnow().isoformat()
-            result["model_used"] = model_name or self.model_name
+            result["model_used"] = model
 
-            logger.info(
-                f"Compliance report generated: score={result.get('overall_compliance_score')}"
-            )
+            logger.info(f"Compliance report generated: score={result.get('overall_compliance_score')}")
             return result
 
         except Exception as e:
-            logger.error(f"Compliance report generation failed: {e}")
-            return {
-                "executive_summary": f"Report generation failed: {str(e)}",
-                "overall_compliance_score": 0,
-                "compliance_level": "unknown",
-                "key_findings": [],
-                "critical_violations": [],
-                "recommended_actions": ["Contact system administrator"],
-                "next_steps": ["Investigate technical issues"],
-                "compliance_trends": [],
-                "target": target,
-                "framework": framework,
-                "generated_at": datetime.utcnow().isoformat(),
-                "model_used": model_name or self.model_name,
-                "error": str(e),
-            }
+            logger.error(f"Compliance report failed: {e}")
+            return self._compliance_error(target, framework, str(e))
 
     async def analyze_osint_findings(
         self,
@@ -231,123 +196,164 @@ class VertexAIIntegration:
         model_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Analyze OSINT findings using Vertex AI.
+        Analyze OSINT findings using Gemini 3 Pro Preview.
         """
-        model = self.get_model(model_name)
+        if not self._ensure_initialized():
+            return self._osint_error(target, findings, "Vertex AI not initialized")
 
+        model = model_name or self.model_name
         findings_str = json.dumps(findings, indent=2, default=str)
 
         prompt = f"""
-        Você é um analista de inteligência de código aberto (OSINT). Analise os achados
-        de investigação fornecidos e forneça insights sobre o alvo.
+        Você é um analista OSINT usando Gemini 3 Pro.
+        Analise os achados de investigação.
 
         Target: {target}
 
         Achados OSINT:
         {findings_str}
 
-        Forneça sua análise no formato JSON com as seguintes chaves:
-        - risk_assessment: avaliação geral de risco ("low", "medium", "high", "critical")
-        - risk_score: número entre 0 e 100
-        - key_insights: lista de insights principais sobre o alvo
-        - suspicious_indicators: indicadores suspeitos identificados
-        - recommended_actions: ações recomendadas baseadas nos achados
-        - data_quality_score: qualidade dos dados coletados (0-100)
-        - confidence_level: nível de confiança na análise (0-1)
-        - summary: resumo executivo dos achados
+        Responda APENAS com JSON válido (sem markdown):
+        {{
+            "risk_assessment": "low|medium|high|critical",
+            "risk_score": 0-100,
+            "key_insights": ["insight1", "insight2"],
+            "suspicious_indicators": ["indicator1"],
+            "recommended_actions": ["action1", "action2"],
+            "data_quality_score": 0-100,
+            "confidence_level": 0.0-1.0,
+            "summary": "resumo dos achados"
+        }}
         """
 
-        generation_config = GenerationConfig(
-            temperature=0.4,
-            top_p=0.9,
-            top_k=40,
-            max_output_tokens=2048,
-            response_mime_type="application/json",
-        )
-
         try:
-            response = await model.generate_content_async(
-                prompt, generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.4,
+                    top_p=0.9,
+                    max_output_tokens=2048,
+                    response_mime_type="application/json",
+                )
             )
 
-            result_text = response.text.strip()
-            if result_text.startswith("```json"):
-                result_text = result_text[7:]
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-
-            result = json.loads(result_text)
-
-            # Add metadata
+            result = self._parse_json_response(response.text)
             result["target"] = target
             result["analysis_timestamp"] = datetime.utcnow().isoformat()
-            result["model_used"] = model_name or self.model_name
+            result["model_used"] = model
             result["findings_count"] = len(findings)
 
-            logger.info(
-                f"OSINT analysis completed: risk={result.get('risk_assessment')}, score={result.get('risk_score')}"
-            )
+            logger.info(f"OSINT analysis completed: risk={result.get('risk_assessment')}")
             return result
 
         except Exception as e:
             logger.error(f"OSINT analysis failed: {e}")
-            return {
-                "risk_assessment": "unknown",
-                "risk_score": 0,
-                "key_insights": ["Analysis failed due to technical issues"],
-                "suspicious_indicators": [],
-                "recommended_actions": ["Contact system administrator"],
-                "data_quality_score": 0,
-                "confidence_level": 0.0,
-                "summary": f"Analysis failed: {str(e)}",
-                "target": target,
-                "analysis_timestamp": datetime.utcnow().isoformat(),
-                "model_used": model_name or self.model_name,
-                "findings_count": len(findings),
-                "error": str(e),
-            }
+            return self._osint_error(target, findings, str(e))
 
     async def stream_analysis(
         self, analysis_type: str, data: Dict[str, Any], model_name: Optional[str] = None
     ) -> AsyncGenerator[str, None]:
         """
-        Stream analysis results in real-time.
+        Stream analysis results using Gemini 3 Pro Preview.
         """
-        model = self.get_model(model_name)
+        if not self._ensure_initialized():
+            yield "Error: Vertex AI not initialized"
+            return
 
+        model = model_name or self.model_name
         data_str = json.dumps(data, indent=2, default=str)
 
         prompt = f"""
-        Você é um analista de segurança cibernética especializado. Forneça uma análise
-        detalhada e estruturada do tipo solicitado.
+        Você é um analista de segurança cibernética usando Gemini 3 Pro.
+        Forneça uma análise detalhada e estruturada.
 
         Tipo de Análise: {analysis_type}
 
         Dados para Análise:
         {data_str}
 
-        Forneça uma análise completa, estruturada e acionável. Seja detalhado mas conciso.
+        Forneça uma análise completa, estruturada e acionável.
         """
 
-        generation_config = GenerationConfig(
-            temperature=0.3,
-            top_p=0.9,
-            top_k=50,
-            max_output_tokens=4096,
-        )
-
         try:
-            response = await model.generate_content_async(
-                prompt, generation_config=generation_config, stream=True
-            )
-
-            async for chunk in response:
+            # Use streaming
+            for chunk in self.client.models.generate_content_stream(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.3,
+                    top_p=0.9,
+                    max_output_tokens=4096,
+                )
+            ):
                 if chunk.text:
                     yield chunk.text
 
         except Exception as e:
             logger.error(f"Streaming analysis failed: {e}")
             yield f"Analysis failed: {str(e)}"
+
+    def _parse_json_response(self, text: str) -> Dict[str, Any]:
+        """Parse JSON from response, handling markdown code blocks."""
+        result_text = text.strip()
+        if result_text.startswith("```json"):
+            result_text = result_text[7:]
+        if result_text.startswith("```"):
+            result_text = result_text[3:]
+        if result_text.endswith("```"):
+            result_text = result_text[:-3]
+        return json.loads(result_text.strip())
+
+    def _error_response(self, error: str, query: str) -> Dict[str, Any]:
+        """Return error response for threat analysis."""
+        return {
+            "risk_level": "unknown",
+            "confidence": 0.0,
+            "insights": ["Analysis failed"],
+            "recommendations": ["Check Vertex AI configuration"],
+            "indicators": [],
+            "summary": f"Error: {error}",
+            "timestamp": datetime.utcnow().isoformat(),
+            "model_used": self.model_name,
+            "query": query,
+            "error": error,
+        }
+
+    def _compliance_error(self, target: str, framework: str, error: str) -> Dict[str, Any]:
+        """Return error response for compliance report."""
+        return {
+            "executive_summary": f"Report generation failed: {error}",
+            "overall_compliance_score": 0,
+            "compliance_level": "unknown",
+            "key_findings": [],
+            "critical_violations": [],
+            "recommended_actions": ["Check Vertex AI configuration"],
+            "next_steps": ["Investigate technical issues"],
+            "target": target,
+            "framework": framework,
+            "generated_at": datetime.utcnow().isoformat(),
+            "model_used": self.model_name,
+            "error": error,
+        }
+
+    def _osint_error(self, target: str, findings: List, error: str) -> Dict[str, Any]:
+        """Return error response for OSINT analysis."""
+        return {
+            "risk_assessment": "unknown",
+            "risk_score": 0,
+            "key_insights": ["Analysis failed"],
+            "suspicious_indicators": [],
+            "recommended_actions": ["Check Vertex AI configuration"],
+            "data_quality_score": 0,
+            "confidence_level": 0.0,
+            "summary": f"Error: {error}",
+            "target": target,
+            "analysis_timestamp": datetime.utcnow().isoformat(),
+            "model_used": self.model_name,
+            "findings_count": len(findings),
+            "error": error,
+        }
 
 
 # Singleton instance

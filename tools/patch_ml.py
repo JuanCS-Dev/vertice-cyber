@@ -174,7 +174,7 @@ async def patch_validate(
     Returns:
         Avaliação de risco com score, nível e recomendações.
     """
-    ctx.info(f"Validating patch ({len(diff_content)} bytes)")
+    await ctx.info(f"Validating patch ({len(diff_content)} bytes)")
     
     validator = get_patch_validator()
     result = await validator.validate_patch(diff_content, language)

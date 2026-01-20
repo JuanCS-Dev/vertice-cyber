@@ -28,9 +28,9 @@ class APIKeysSettings(BaseSettings):
     gcp_project_id: Optional[str] = Field(
         default=None, description="Google Cloud Project ID"
     )
-    gcp_location: str = Field(default="global", description="Google Cloud Region")
+    gcp_location: str = Field(default="global", description="Google Cloud Region (global for Gemini 3)")
     vertex_model: str = Field(
-        default="gemini-3-flash-preview", description="Vertex AI Model"
+        default="gemini-3-pro-preview", description="Vertex AI Model (Gemini 3 Pro Preview)"
     )
 
 

@@ -335,12 +335,12 @@ async def threat_analyze(
     Returns:
         Análise completa com indicadores, técnicas MITRE e predições
     """
-    ctx.info(f"Starting threat analysis for {target}")
+    await ctx.info(f"Starting threat analysis for {target}")
 
     prophet = get_threat_prophet()
     analysis = await prophet.analyze_threats(target, include_predictions)
 
-    ctx.info(f"Analysis complete. Risk score: {analysis.overall_risk_score}")
+    await ctx.info(f"Analysis complete. Risk score: {analysis.overall_risk_score}")
 
     return analysis.model_dump()
 
@@ -355,12 +355,12 @@ async def threat_intelligence(ctx, query: str) -> Dict[str, Any]:
     Returns:
         Técnicas MITRE ATT&CK relacionadas à query
     """
-    ctx.info(f"Searching threat intelligence for: {query}")
+    await ctx.info(f"Searching threat intelligence for: {query}")
 
     prophet = get_threat_prophet()
     results = await prophet.get_threat_intelligence(query)
 
-    ctx.info(f"Found {results['total_matches']} matching techniques")
+    await ctx.info(f"Found {results['total_matches']} matching techniques")
 
     return results
 
@@ -375,7 +375,7 @@ async def threat_predict(ctx, target: str) -> Dict[str, Any]:
     Returns:
         Predições de ameaças com ações recomendadas
     """
-    ctx.info(f"Generating threat predictions for {target}")
+    await ctx.info(f"Generating threat predictions for {target}")
 
     prophet = get_threat_prophet()
     analysis = await prophet.analyze_threats(target, include_predictions=True)

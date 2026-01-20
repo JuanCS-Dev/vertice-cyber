@@ -20,7 +20,7 @@ async def compliance_assess(ctx, target: str, framework: str) -> Dict[str, Any]:
     Returns:
         Avaliação completa de conformidade
     """
-    ctx.info(f"Starting compliance assessment for {target} against {framework}")
+    await ctx.info(f"Starting compliance assessment for {target} against {framework}")
 
     # Map string to enum
     framework_enum = ComplianceFramework(framework.lower())
@@ -28,7 +28,7 @@ async def compliance_assess(ctx, target: str, framework: str) -> Dict[str, Any]:
     guardian = get_compliance_guardian()
     assessment = await guardian.assess_compliance(target, framework_enum)
 
-    ctx.info(f"Assessment complete. Score: {assessment.overall_score:.1f}")
+    await ctx.info(f"Assessment complete. Score: {assessment.overall_score:.1f}")
 
     return assessment.model_dump()
 
@@ -44,7 +44,7 @@ async def compliance_report(ctx, target: str, frameworks: List[str]) -> Dict[str
     Returns:
         Relatório consolidado de conformidade
     """
-    ctx.info(
+    await ctx.info(
         f"Generating compliance report for {target} across {len(frameworks)} frameworks"
     )
 
@@ -57,7 +57,7 @@ async def compliance_report(ctx, target: str, frameworks: List[str]) -> Dict[str
             assessment = await guardian.assess_compliance(target, framework_enum)
             assessments.append(assessment)
         except ValueError:
-            ctx.warning(f"Unknown framework: {framework_name}")
+            await ctx.warning(f"Unknown framework: {framework_name}")
             continue
 
     # Calculate consolidated metrics
@@ -104,7 +104,7 @@ async def compliance_report(ctx, target: str, frameworks: List[str]) -> Dict[str
         else None,
     }
 
-    ctx.info(f"Report generated. Overall score: {total_score:.1f}")
+    await ctx.info(f"Report generated. Overall score: {total_score:.1f}")
 
     return report
 
@@ -120,7 +120,7 @@ async def compliance_check(ctx, requirement_id: str, target: str) -> Dict[str, A
     Returns:
         Status de conformidade para o requisito específico
     """
-    ctx.info(f"Checking compliance for requirement {requirement_id} on {target}")
+    await ctx.info(f"Checking compliance for requirement {requirement_id} on {target}")
 
     # Extract framework from requirement ID
     if requirement_id.startswith("GDPR"):
@@ -168,6 +168,6 @@ async def compliance_check(ctx, requirement_id: str, target: str) -> Dict[str, A
             "message": f"Requirement {requirement_id} not found in {framework.value} framework",
         }
 
-    ctx.info(f"Compliance check result: {result['status']}")
+    await ctx.info(f"Compliance check result: {result['status']}")
 
     return result

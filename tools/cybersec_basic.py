@@ -216,7 +216,7 @@ async def cybersec_recon(
     Returns:
         Relatório de reconhecimento com portas abertas e issues encontrados.
     """
-    ctx.info(f"Starting reconnaissance on {target}")
+    await ctx.info(f"Starting reconnaissance on {target}")
     
     agent = get_cybersec_agent()
     result = await agent.run_recon(target, scan_ports, scan_web)

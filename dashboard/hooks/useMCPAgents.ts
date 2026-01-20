@@ -1,0 +1,188 @@
+/**
+ * useMCPAgents Hook
+ * Gerencia estado dos agents MCP com real-time updates via WebSocket
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import { mcpClient } from '../services/mcpClient';
+import { eventStream } from '../services/eventStream';
+import type { Agent, AgentStatus, Threat } from '../types';
+// Types are inline - MCP bridge provides the data
+import { generateAgents } from '../types'; // For 3D positions
+
+export interface UseMCPAgentsReturn {
+    agents: Agent[];
+    threats: Threat[];
+    logs: string[];
+    isLoading: boolean;
+    isConnected: boolean;
+    error: string | null;
+    refetch: () => Promise<void>;
+}
+
+// Map MCP categories to dashboard roles
+const CATEGORY_TO_ROLE: Record<string, Agent['role']> = {
+    governance: 'Guardian',
+    intelligence: 'Analyst',
+    offensive: 'Hunter',
+    ai: 'Analyst',
+};
+
+export function useMCPAgents(): UseMCPAgentsReturn {
+    const [agents, setAgents] = useState<Agent[]>([]);
+    const [threats, setThreats] = useState<Threat[]>([]);
+    const [logs, setLogs] = useState<string[]>(['🚀 Initializing MCP connection...']);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isConnected, setIsConnected] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Add log entry with timestamp
+    const addLog = useCallback((msg: string) => {
+        setLogs(prev => [...prev.slice(-29), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    }, []);
+
+    /**
+     * Fetch agents from MCP and merge with 3D positions
+     */
+    const fetchAgents = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            // Health check first
+            const health = await mcpClient.health();
+            if (health.status !== 'healthy') {
+                throw new Error('MCP server is not healthy');
+            }
+
+            // Fetch tools
+            const toolsResponse = await mcpClient.listTools();
+            const tools = toolsResponse.tools;
+
+            // Group tools by agent
+            const agentMap = new Map<string, any[]>();
+            for (const tool of tools) {
+                const agentName = tool.agent;
+                if (!agentMap.has(agentName)) {
+                    agentMap.set(agentName, []);
+                }
+                agentMap.get(agentName)!.push(tool);
+            }
+
+            // Generate positions using existing algorithm
+            const generatedAgents = generateAgents(agentMap.size);
+
+            // Merge MCP data with generated positions
+            let index = 0;
+            const mergedAgents: Agent[] = [];
+
+            for (const [agentName, agentTools] of agentMap) {
+                const category = agentTools[0]?.category || 'intelligence';
+                const role = CATEGORY_TO_ROLE[category] || 'Analyst';
+                const genAgent = generatedAgents[index] || generatedAgents[0];
+
+                mergedAgents.push({
+                    ...genAgent,
+                    id: `AG-${100 + index}`,
+                    name: agentName,
+                    role,
+                    status: 'IDLE' as AgentStatus,
+                    health: 100,
+                    cpuLoad: Math.floor(Math.random() * 30) + 10,
+                });
+
+                index++;
+            }
+
+            setAgents(mergedAgents);
+            addLog(`✅ Loaded ${tools.length} tools from ${mergedAgents.length} agents`);
+
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Failed to fetch agents';
+            setError(errorMsg);
+            addLog(`❌ Error: ${errorMsg}`);
+
+            // Fallback to generated agents
+            setAgents(generateAgents(12));
+        } finally {
+            setIsLoading(false);
+        }
+    }, [addLog]);
+
+    /**
+     * Handle MCP events from WebSocket
+     */
+    useEffect(() => {
+        // Connect to WebSocket
+        eventStream.connect();
+
+        // Connection status
+        const unsubConnect = eventStream.on('_connected', () => {
+            setIsConnected(true);
+            addLog('🔌 Connected to MCP Event Stream');
+        });
+
+        const unsubDisconnect = eventStream.on('_disconnected', () => {
+            setIsConnected(false);
+            addLog('⚠️ Disconnected from event stream');
+        });
+
+        // Handle all events for logging
+        const unsubAll = eventStream.on('*', (event: any) => {
+            addLog(`📡 [${event.source || 'system'}] ${event.type}`);
+        });
+
+        // Handle threat events
+        const unsubThreat = eventStream.on('threat.detected', (event: any) => {
+            const newThreat: Threat = {
+                id: `TH-${Date.now().toString(36).slice(-4).toUpperCase()}`,
+                severity: (event.data?.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') || 'MEDIUM',
+                type: (event.data?.type as Threat['type']) || 'Anomaly',
+                timestamp: new Date().toLocaleTimeString(),
+                status: 'DETECTED',
+            };
+            setThreats(prev => [newThreat, ...prev.slice(0, 9)]);
+        });
+
+        // Handle agent status changes
+        const unsubEthics = eventStream.on('ethics.validation.completed', (event: any) => {
+            addLog(`⚖️ Ethics: ${event.data?.decision_type || 'completed'}`);
+        });
+
+        const unsubOsint = eventStream.on('osint.investigation.completed', (event: any) => {
+            addLog(`🔍 OSINT: Investigation completed`);
+        });
+
+        const unsubMaxReconnect = eventStream.on('_max_reconnect', () => {
+            setError('Connection lost. Please refresh the page.');
+            addLog('❌ Max reconnection attempts reached');
+        });
+
+        // Cleanup
+        return () => {
+            unsubConnect();
+            unsubDisconnect();
+            unsubAll();
+            unsubThreat();
+            unsubEthics();
+            unsubOsint();
+            unsubMaxReconnect();
+            eventStream.disconnect();
+        };
+    }, [addLog]);
+
+    // Initial fetch
+    useEffect(() => {
+        fetchAgents();
+    }, [fetchAgents]);
+
+    return {
+        agents,
+        threats,
+        logs,
+        isLoading,
+        isConnected,
+        error,
+        refetch: fetchAgents,
+    };
+}

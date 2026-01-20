@@ -292,12 +292,12 @@ async def ethical_validate(
     Returns:
         Decisão ética com approved, conditions, reasoning
     """
-    ctx.info(f"Validating action: {action[:50]}...")
+    await ctx.info(f"Validating action: {action[:50]}...")
 
     magistrate = get_magistrate()
     decision = await magistrate.validate(action, context or {}, "system")
 
-    ctx.info(f"Decision: {decision.decision_type.value}")
+    await ctx.info(f"Decision: {decision.decision_type.value}")
 
     return decision.model_dump()
 

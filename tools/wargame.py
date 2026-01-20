@@ -222,7 +222,7 @@ async def wargame_run_simulation(
     Returns:
         Resultado da simulação incluindo logs e taxa de detecção.
     """
-    ctx.info(f"Running wargame scenario {scenario_id} against {target}")
+    await ctx.info(f"Running wargame scenario {scenario_id} against {target}")
     
     executor = get_wargame_executor()
     try:

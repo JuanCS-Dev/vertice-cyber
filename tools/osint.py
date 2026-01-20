@@ -314,13 +314,13 @@ async def osint_investigate(ctx, target: str, depth: str = "basic") -> Dict[str,
     Returns:
         Resultado com findings, breaches e risk_score
     """
-    ctx.info(f"Starting OSINT investigation on {target}")
+    await ctx.info(f"Starting OSINT investigation on {target}")
 
     hunter = get_osint_hunter()
     depth_enum = InvestigationDepth(depth)
     result = await hunter.investigate(target, depth_enum)
 
-    ctx.info(f"Investigation complete. Risk score: {result.risk_score}")
+    await ctx.info(f"Investigation complete. Risk score: {result.risk_score}")
 
     return result.model_dump()
 
@@ -335,7 +335,7 @@ async def osint_breach_check(ctx, email: str) -> Dict[str, Any]:
     Returns:
         Lista de breaches onde o email aparece
     """
-    ctx.info(f"Checking breaches for {email}")
+    await ctx.info(f"Checking breaches for {email}")
 
     hunter = get_osint_hunter()
     breaches = await hunter.check_breach(email)
