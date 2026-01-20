@@ -17,6 +17,7 @@ from tools.threat import threat_analyze, threat_intelligence, threat_predict
 from tools.compliance import compliance_assess, compliance_report, compliance_check
 from tools.wargame import wargame_list_scenarios, wargame_run_simulation
 from tools.patch_ml import patch_validate
+from tools.cybersec_basic import cybersec_recon
 from tools.mcp_ai_tools import (
     ai_threat_analysis,
     ai_compliance_assessment,
@@ -74,6 +75,7 @@ async def get_agents_list() -> str:
 ## Offensive Security
 - **Wargame Executor**: Simulação de ataques e validação de defesas
 - **Patch Validator ML**: Análise preditiva de risco em código
+- **CyberSec Investigator**: Reconhecimento e pentest básico (Agent 12)
 
 ## AI-Powered (Vertex AI)
 - **AI Threat Analysis**: Análise inteligente de ameaças
@@ -213,6 +215,21 @@ async def patch_validate_tool(
 
 
 # =============================================================================
+# CYBERSEC BASIC TOOLS (Phase 4.5)
+# =============================================================================
+
+
+@mcp.tool()
+async def cybersec_recon_tool(
+    ctx: Context, target: str, scan_ports: bool = True, scan_web: bool = True
+) -> Dict[str, Any]:
+    """Realiza reconhecimento básico (portas, web headers)."""
+    result = await cybersec_recon(ctx, target, scan_ports, scan_web)
+    await ctx.info(f"Recon completed for {target}")
+    return result
+
+
+# =============================================================================
 # AI TOOLS (Vertex AI)
 # =============================================================================
 
@@ -264,6 +281,7 @@ def main():
         print("  ✅ wargame_list_scenarios_tool")
         print("  ✅ wargame_run_simulation_tool")
         print("  ✅ patch_validate_tool")
+        print("  ✅ cybersec_recon_tool")
         print("  ✅ ai_threat_analysis")
         print("  ✅ ai_compliance_assessment")
         print("  ✅ ai_osint_analysis")

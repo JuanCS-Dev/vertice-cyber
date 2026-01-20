@@ -45,6 +45,12 @@ class EventType(str, Enum):
     PATCH_VALIDATION_REQUESTED = "patch.validation.requested"
     PATCH_VALIDATION_COMPLETED = "patch.validation.completed"
 
+    # CyberSec Basic
+    RECON_STARTED = "cybersec.recon.started"
+    RECON_COMPLETED = "cybersec.recon.completed"
+    VULN_SCAN_STARTED = "cybersec.vuln_scan.started"
+    VULN_SCAN_COMPLETED = "cybersec.vuln_scan.completed"
+
     # System
     SYSTEM_HEALTH_CHECK = "system.health.check"
     SYSTEM_ERROR = "system.error"
