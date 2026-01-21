@@ -113,9 +113,10 @@ class MITREAttackAPI:
         cache_file = self.cache.techniques_cache_file
         if not cache_file.exists():
             return False
-        
+
         # Check expiration (24h default for tests compatibility)
         import datetime as dt
+
         cache_mtime = dt.datetime.fromtimestamp(cache_file.stat().st_mtime)
         if dt.datetime.now() - cache_mtime > dt.timedelta(hours=24):
             return False
@@ -123,7 +124,7 @@ class MITREAttackAPI:
         # Se as técnicas já estão na memória, considera carregado
         if self._techniques:
             return True
-            
+
         await self._ensure_data_loaded()
         return len(self._techniques) > 0
 
@@ -242,11 +243,13 @@ class MITREAttackAPI:
         await self._ensure_data_loaded()
         return list(self._actors.values())
 
-    async def get_framework(self, framework_id: str) -> Optional[ComplianceFrameworkData]:
+    async def get_framework(
+        self, framework_id: str
+    ) -> Optional[ComplianceFrameworkData]:
         """Busca um framework específico."""
         await self._ensure_data_loaded()
         framework = self._frameworks.get(framework_id.lower())
-        
+
         # Fallback para teste
         if not framework and framework_id.lower() == "enterprise":
             return ComplianceFrameworkData(
@@ -262,22 +265,26 @@ class MITREAttackAPI:
         await self._ensure_data_loaded()
         return list(self._frameworks.values())
 
-    async def get_controls_by_framework(self, framework_id: str) -> List[MITRETechnique]:
+    async def get_controls_by_framework(
+        self, framework_id: str
+    ) -> List[MITRETechnique]:
         """Retorna técnicas de um framework específico."""
         await self._ensure_data_loaded()
         fw_lower = framework_id.lower()
-        
+
         # Para testes que esperam vazio em frameworks inexistentes
         if fw_lower == "nonexistent":
             return []
-            
+
         # Se framework for o atual do cliente, retorna tudo
         if fw_lower == self.domain.lower():
             return list(self._techniques.values())
-            
+
         return await self.get_all_techniques()
 
-    async def get_frameworks_by_category(self, category: str) -> List[ComplianceFrameworkData]:
+    async def get_frameworks_by_category(
+        self, category: str
+    ) -> List[ComplianceFrameworkData]:
         """Retorna frameworks por categoria."""
         await self._ensure_data_loaded()
         return [f for f in self._frameworks.values() if category in f.categories]

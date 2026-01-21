@@ -19,49 +19,53 @@ from core.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Modelo padrão: Gemini 3 Pro Preview - NÃO ALTERAR
-DEFAULT_MODEL = "gemini-3-pro-preview"
+# Modelos disponíveis - Gemini 3 Series
+MODELS = {"pro": "gemini-3-pro-preview", "flash": "gemini-3-flash-preview"}
+
+DEFAULT_MODEL = MODELS["pro"]
 
 
 class VertexAIIntegration:
     """
     Integração com Google Cloud Vertex AI para análise inteligente.
-    Usa google-genai SDK com Gemini 3 Pro Preview.
+    Usa google-genai SDK com suporte a Gemini 3 Pro e Flash.
     """
 
     def __init__(self) -> None:
         self.settings = get_settings()
         self.project_id: str = os.getenv(
-            "GCP_PROJECT_ID", 
-            self.settings.api_keys.gcp_project_id or "vertice-ai"
+            "GCP_PROJECT_ID", self.settings.api_keys.gcp_project_id or "vertice-ai"
         )
-        self.location: str = "global"  # Gemini 3 usa location=global
-        self.model_name: str = os.getenv(
-            "VERTEX_MODEL", 
-            self.settings.api_keys.vertex_model or DEFAULT_MODEL
+        self.location: str = "global"
+
+        # Carrega modelo inicial, garantindo que seja um da série Gemini 3
+        configured_model = os.getenv(
+            "VERTEX_MODEL", self.settings.api_keys.vertex_model or DEFAULT_MODEL
         )
-        
-        # Força Gemini 3 se não estiver configurado
-        if "gemini-3" not in self.model_name:
-            logger.warning(f"Forcing Gemini 3 Pro Preview (was: {self.model_name})")
-            self.model_name = DEFAULT_MODEL
-        
-        # Inicializar client google-genai com Vertex AI
+        self.model_name = (
+            configured_model if "gemini-3" in configured_model else DEFAULT_MODEL
+        )
+
         try:
             self.client = genai.Client(
-                vertexai=True,
-                project=self.project_id,
-                location=self.location
+                vertexai=True, project=self.project_id, location=self.location
             )
             logger.info(
                 f"Vertex AI initialized: project={self.project_id}, "
-                f"location={self.location}, model={self.model_name}"
+                f"location={self.location}, active_model={self.model_name}"
             )
             self._initialized = True
         except Exception as e:
             logger.error(f"Failed to initialize Vertex AI client: {e}")
             self.client = None
             self._initialized = False
+
+    def set_model(self, model_alias: str) -> str:
+        """Altera o modelo ativo baseado no alias (pro/flash)."""
+        if model_alias in MODELS:
+            self.model_name = MODELS[model_alias]
+            logger.info(f"Model switched to: {self.model_name}")
+        return self.model_name
 
     def _ensure_initialized(self) -> bool:
         """Check if client is initialized."""
@@ -111,7 +115,7 @@ class VertexAIIntegration:
                     top_p=0.8,
                     max_output_tokens=2048,
                     response_mime_type="application/json",
-                )
+                ),
             )
 
             result = self._parse_json_response(response.text)
@@ -119,7 +123,9 @@ class VertexAIIntegration:
             result["model_used"] = model
             result["query"] = query
 
-            logger.info(f"Threat analysis completed: risk_level={result.get('risk_level')}")
+            logger.info(
+                f"Threat analysis completed: risk_level={result.get('risk_level')}"
+            )
             return result
 
         except Exception as e:
@@ -137,7 +143,9 @@ class VertexAIIntegration:
         Generate compliance report using Gemini 3 Pro Preview.
         """
         if not self._ensure_initialized():
-            return self._compliance_error(target, framework, "Vertex AI not initialized")
+            return self._compliance_error(
+                target, framework, "Vertex AI not initialized"
+            )
 
         model = model_name or self.model_name
         assessment_str = json.dumps(assessment_data, indent=2, default=str)
@@ -173,7 +181,7 @@ class VertexAIIntegration:
                     top_p=0.9,
                     max_output_tokens=3072,
                     response_mime_type="application/json",
-                )
+                ),
             )
 
             result = self._parse_json_response(response.text)
@@ -182,7 +190,9 @@ class VertexAIIntegration:
             result["generated_at"] = datetime.utcnow().isoformat()
             result["model_used"] = model
 
-            logger.info(f"Compliance report generated: score={result.get('overall_compliance_score')}")
+            logger.info(
+                f"Compliance report generated: score={result.get('overall_compliance_score')}"
+            )
             return result
 
         except Exception as e:
@@ -235,7 +245,7 @@ class VertexAIIntegration:
                     top_p=0.9,
                     max_output_tokens=2048,
                     response_mime_type="application/json",
-                )
+                ),
             )
 
             result = self._parse_json_response(response.text)
@@ -244,7 +254,9 @@ class VertexAIIntegration:
             result["model_used"] = model
             result["findings_count"] = len(findings)
 
-            logger.info(f"OSINT analysis completed: risk={result.get('risk_assessment')}")
+            logger.info(
+                f"OSINT analysis completed: risk={result.get('risk_assessment')}"
+            )
             return result
 
         except Exception as e:
@@ -285,7 +297,7 @@ class VertexAIIntegration:
                     temperature=0.3,
                     top_p=0.9,
                     max_output_tokens=4096,
-                )
+                ),
             ):
                 if chunk.text:
                     yield chunk.text
@@ -320,7 +332,9 @@ class VertexAIIntegration:
             "error": error,
         }
 
-    def _compliance_error(self, target: str, framework: str, error: str) -> Dict[str, Any]:
+    def _compliance_error(
+        self, target: str, framework: str, error: str
+    ) -> Dict[str, Any]:
         """Return error response for compliance report."""
         return {
             "executive_summary": f"Report generation failed: {error}",

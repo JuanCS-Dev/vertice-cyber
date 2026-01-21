@@ -161,6 +161,7 @@ class ComplianceFrameworksAPI:
         # Em uma implementação real, isso chamaria o Guardian
         # Aqui fornecemos uma ponte básica
         from .guardian import get_compliance_guardian, ComplianceFramework
+
         guardian = get_compliance_guardian()
         try:
             fw_enum = ComplianceFramework(framework_id.lower())
@@ -172,16 +173,16 @@ class ComplianceFrameworksAPI:
         """Verifica um requisito específico."""
         await self._ensure_data_loaded()
         control = await self.get_control(requirement_id)
-        
+
         if not control:
             # Return a "not found" structure instead of None to satisfy tests
             return {
                 "id": requirement_id,
                 "status": "not_found",
                 "target": target,
-                "message": f"Requirement {requirement_id} not found"
+                "message": f"Requirement {requirement_id} not found",
             }
-            
+
         # Simulação básica
         return {"id": requirement_id, "status": "compliant", "target": target}
 

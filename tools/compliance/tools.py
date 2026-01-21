@@ -63,7 +63,7 @@ async def compliance_report(ctx, target: str, frameworks: List[str]) -> Dict[str
     # Calculate consolidated metrics
     if assessments:
         total_score = sum(a.overall_score for a in assessments) / len(assessments)
-        
+
         def get_status_val(x):
             if hasattr(x, "value"):
                 return x.value

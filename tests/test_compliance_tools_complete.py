@@ -19,6 +19,7 @@ class TestComplianceTools:
     @pytest.fixture(autouse=True)
     def mock_event_bus(self, monkeypatch):
         from core.event_bus import EventBus
+
         monkeypatch.setattr(EventBus, "emit", AsyncMock(return_value=MagicMock()))
 
     @pytest.mark.asyncio
@@ -70,7 +71,7 @@ class TestComplianceTools:
         mock_assessment = MagicMock()
         mock_assessment.checks = []
         mock_guardian.assess_compliance = AsyncMock(return_value=mock_assessment)
-        
+
         ctx = MagicMock()
         ctx.info = AsyncMock()
 

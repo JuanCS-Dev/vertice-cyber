@@ -258,7 +258,6 @@ class TestMITREAPICompleteCoverage:
         framework = await mitre_client.get_framework("enterprise")
         assert framework is not None
 
-
     def test_mitre_client_cache_file_path(self, mitre_client):
         """Test cache file path is correctly set."""
         assert mitre_client.cache_file is not None
@@ -276,6 +275,7 @@ class TestMITREAPICompleteCoverage:
     async def test_load_cache_expired(self, mitre_client):
         """Test _load_cache when file is expired."""
         from datetime import datetime
+
         expired_time = datetime.now() - timedelta(hours=25)
 
         with (

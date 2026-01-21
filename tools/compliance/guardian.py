@@ -79,7 +79,7 @@ class ComplianceGuardian:
             framework_val = framework.value
         else:
             framework_val = str(framework)
-        
+
         event_bus = get_event_bus()
         await event_bus.emit(
             EventType.THREAT_DETECTED,  # Reutilizando evento existente

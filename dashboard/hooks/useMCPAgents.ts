@@ -10,35 +10,44 @@ import type { Agent, AgentStatus, Threat } from '../types';
 // Types are inline - MCP bridge provides the data
 import { generateAgents } from '../types'; // For 3D positions
 
+export interface LogObject {
+    timestamp: string;
+    level: 'info' | 'warn' | 'error' | 'success' | 'debug';
+    source: string;
+    message: string;
+}
+
 export interface UseMCPAgentsReturn {
     agents: Agent[];
     threats: Threat[];
-    logs: string[];
+    logs: LogObject[];
     isLoading: boolean;
     isConnected: boolean;
     error: string | null;
     refetch: () => Promise<void>;
 }
 
-// Map MCP categories to dashboard roles
-const CATEGORY_TO_ROLE: Record<string, Agent['role']> = {
-    governance: 'Guardian',
-    intelligence: 'Analyst',
-    offensive: 'Hunter',
-    ai: 'Analyst',
-};
-
 export function useMCPAgents(): UseMCPAgentsReturn {
     const [agents, setAgents] = useState<Agent[]>([]);
     const [threats, setThreats] = useState<Threat[]>([]);
-    const [logs, setLogs] = useState<string[]>(['🚀 Initializing MCP connection...']);
+    const [logs, setLogs] = useState<LogObject[]>([{
+        timestamp: new Date().toLocaleTimeString(),
+        level: 'info',
+        source: 'SYSTEM',
+        message: 'Neural Core Initializing...'
+    }]);
     const [isLoading, setIsLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Add log entry with timestamp
-    const addLog = useCallback((msg: string) => {
-        setLogs(prev => [...prev.slice(-29), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    // Add structured log entry
+    const addLog = useCallback((msg: string, level: LogObject['level'] = 'info', source: string = 'SYSTEM') => {
+        setLogs(prev => [...prev.slice(-49), {
+            timestamp: new Date().toLocaleTimeString(),
+            level,
+            source,
+            message: msg
+        }]);
     }, []);
 
     /**
@@ -129,11 +138,21 @@ export function useMCPAgents(): UseMCPAgentsReturn {
 
         // Handle all events for logging
         const unsubAll = eventStream.on('*', (event: any) => {
-            addLog(`📡 [${event.source || 'system'}] ${event.type}`);
+            let level: LogObject['level'] = 'info';
+            if (event.type.includes('error') || event.type.includes('failed')) level = 'error';
+            if (event.type.includes('success') || event.type.includes('completed')) level = 'success';
+            if (event.type.includes('warning')) level = 'warn';
+
+            addLog(
+                `${event.type.replace(/\./g, ' ').toUpperCase()}`, 
+                level, 
+                (event.source || 'MCP').toUpperCase()
+            );
         });
 
         // Handle threat events
         const unsubThreat = eventStream.on('threat.detected', (event: any) => {
+            addLog(`THREAT DETECTED: ${event.data?.type || 'Anomaly'}`, 'error', 'THREAT_ENGINE');
             const newThreat: Threat = {
                 id: `TH-${Date.now().toString(36).slice(-4).toUpperCase()}`,
                 severity: (event.data?.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') || 'MEDIUM',

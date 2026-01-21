@@ -153,39 +153,79 @@ class ThreatProphet:
         return await self._generate_predictions(target)
 
     async def _gather_indicators(self, target: str) -> List[ThreatIndicator]:
-        """Coleta indicadores de ameaça para o alvo."""
+        """
+        Coleta indicadores de ameaça reais usando OTX e VirusTotal.
+        """
         indicators = []
 
-        # Simulação de indicadores baseados no target
-        # Em produção, isso seria integrado com feeds reais de threat intel
+        from tools.providers.otx import get_otx_provider
+        from tools.providers.virustotal import get_vt_provider
 
-        if "@" in target:  # Email target
-            indicators.extend(
-                [
+        otx = get_otx_provider()
+        vt = get_vt_provider()
+
+        # Determina tipo de indicador
+        indicator_type = "ip"
+        if "@" in target:
+            indicator_type = "email"
+        elif "." in target and not target.replace(".", "").isdigit():
+            indicator_type = "domain"
+
+        # 1. Consulta OTX
+        try:
+            otx_data = await otx.execute_with_fallback(target, type=indicator_type)
+            if otx_data.get("pulse_count", 0) > 0:
+                indicators.append(
+                    ThreatIndicator(
+                        indicator_type=indicator_type,
+                        value=target,
+                        confidence=min(0.5 + (otx_data["pulse_count"] * 0.05), 1.0),
+                        first_seen=otx_data.get("first_seen", "unknown"),
+                        last_seen=otx_data.get("last_seen", "unknown"),
+                        tags=otx_data.get("tags", []),
+                    )
+                )
+        except Exception as e:
+            logger.warning(f"OTX lookup failed: {e}")
+
+        # 2. Consulta VirusTotal (apenas se for IP ou Domain no free tier)
+        if indicator_type in ["ip", "domain"]:
+            try:
+                vt_data = await vt.execute_with_fallback(target, type=indicator_type)
+                stats = (
+                    vt_data.get("data", {})
+                    .get("attributes", {})
+                    .get("last_analysis_stats", {})
+                )
+                malicious = stats.get("malicious", 0)
+
+                if malicious > 0:
+                    indicators.append(
+                        ThreatIndicator(
+                            indicator_type=indicator_type,
+                            value=target,
+                            confidence=malicious / max(sum(stats.values()), 1),
+                            first_seen="unknown",
+                            last_seen="unknown",
+                            tags=["virustotal_malicious"],
+                        )
+                    )
+            except Exception as e:
+                logger.warning(f"VirusTotal lookup failed: {e}")
+
+        # Se nenhum indicador real foi encontrado, mantemos heurísticas básicas (fallback)
+        if not indicators:
+            if "@" in target:
+                indicators.append(
                     ThreatIndicator(
                         indicator_type="email",
                         value=target,
-                        confidence=0.8,
-                        first_seen="2024-01-15",
-                        last_seen="2024-01-20",
-                        tags=["phishing", "credential_stuffing"],
+                        confidence=0.1,
+                        first_seen="unknown",
+                        last_seen="unknown",
+                        tags=["heuristic_clean"],
                     )
-                ]
-            )
-
-        elif "." in target and not target.replace(".", "").isdigit():  # Domain
-            indicators.extend(
-                [
-                    ThreatIndicator(
-                        indicator_type="domain",
-                        value=target,
-                        confidence=0.6,
-                        first_seen="2024-01-10",
-                        last_seen="2024-01-18",
-                        tags=["suspicious_registration", "malware_distribution"],
-                    )
-                ]
-            )
+                )
 
         return indicators
 
@@ -268,41 +308,26 @@ class ThreatProphet:
 
     async def get_threat_intelligence(self, query: str) -> Dict[str, Any]:
         """
-        Busca inteligência de ameaças por query.
-
-        Args:
-            query: Termo de busca (ex: "ransomware", "APT41")
-
-        Returns:
-            Informações de inteligência de ameaças
+        Busca inteligência de ameaças por query usando MITRE client real.
         """
-        # Mock data - em produção seria integrado com pyattck
-        mock_techniques = [
-            {
-                "id": "T1486",
-                "name": "Data Encrypted for Impact",
-                "description": "Adversaries may encrypt data on target systems or on large numbers of systems in a network to interrupt availability to system and network resources.",
-                "tactics": ["Impact"],
-            },
-            {
-                "id": "T1490",
-                "name": "Inhibit System Recovery",
-                "description": "Adversaries may delete or remove built-in operating system tools or native operating system commands that are installed as part of a network device.",
-                "tactics": ["Impact"],
-            },
-        ]
+        try:
+            techniques = await self.mitre_client.search_techniques(query)
 
-        # Busca mock baseada na query
-        matching_techniques = []
-        for technique in mock_techniques:
-            if query.lower() in technique["name"].lower():
-                matching_techniques.append(technique)
-
-        return {
-            "query": query,
-            "matching_techniques": matching_techniques,
-            "total_matches": len(matching_techniques),
-        }
+            return {
+                "query": query,
+                "matching_techniques": [
+                    {"id": t.id, "name": t.name, "description": t.description}
+                    for t in techniques[:10]
+                ],
+                "total_matches": len(techniques),
+            }
+        except Exception as e:
+            logger.error(f"MITRE search failed: {e}")
+            raise NotImplementedError(
+                f"Advanced Threat Intel for '{query}' could not be processed. "
+                "Root cause: PyATT&CK integration issue or connectivity. "
+                "Alternative: Use ai_threat_analysis for reasoning."
+            )
 
 
 # Singleton

@@ -24,9 +24,7 @@ class TestVertexAIRealIntegration:
             },
         ):
             with patch("vertexai.init") as mock_init:
-                with patch(
-                    "tools.vertex_ai.GenerativeModel"
-                ) as mock_model_class:
+                with patch("tools.vertex_ai.GenerativeModel") as mock_model_class:
                     mock_model = MagicMock()
                     mock_model.generate_content_async = AsyncMock()
                     mock_model_class.return_value = mock_model
@@ -44,9 +42,7 @@ class TestVertexAIRealIntegration:
             with patch.dict(os.environ, {"GCP_PROJECT_ID": "vertice-ai"}):
                 _ = VertexAIIntegration()
                 # Verify vertexai.init was called with correct parameters
-                mock_init.assert_called_with(
-                    project="vertice-ai", location="global"
-                )
+                mock_init.assert_called_with(project="vertice-ai", location="global")
 
     @pytest.mark.asyncio
     async def test_real_vertex_ai_threat_analysis(self, mock_gcp_auth):

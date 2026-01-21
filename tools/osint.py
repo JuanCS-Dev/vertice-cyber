@@ -7,7 +7,6 @@ import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import httpx
 from pydantic import BaseModel, Field
 
 from core.settings import get_settings
@@ -123,57 +122,44 @@ class OSINTHunter:
         """
         Verifica se email aparece em breaches conhecidos.
 
+        Usa chain de providers: Real HIBP → Cache → AI Fallback
+
         Args:
             email: Email a verificar
 
         Returns:
-            Lista de breaches
+            Lista de breaches onde email aparece
         """
-        if not self.hibp_api_key:
-            logger.warning("HIBP API key not configured")
-            return []
+        from tools.providers.hibp import get_hibp_provider
 
-        breaches = []
+        provider = get_hibp_provider()
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}",
-                    headers={
-                        "hibp-api-key": self.hibp_api_key,
-                        "User-Agent": "Vertice-Cyber-OSINT/2.0",
-                    },
-                    timeout=10.0,
+            breaches = await provider.execute_with_fallback(email)
+
+            # Converte de BreachData para BreachInfo (modelo interno)
+            converted_breaches = [
+                BreachInfo(
+                    name=b.name,
+                    date=b.breach_date,
+                    data_classes=b.data_classes,
+                    is_verified=b.is_verified,
+                )
+                for b in breaches
+            ]
+
+            if converted_breaches:
+                await self.event_bus.emit(
+                    EventType.OSINT_BREACH_DETECTED,
+                    {"email": email, "count": len(converted_breaches)},
+                    source="osint_hunter",
                 )
 
-                if response.status_code == 200:
-                    data = response.json()
-                    for breach in data:
-                        breaches.append(
-                            BreachInfo(
-                                name=breach.get("Name", "Unknown"),
-                                date=breach.get("BreachDate", "Unknown"),
-                                data_classes=breach.get("DataClasses", []),
-                                is_verified=breach.get("IsVerified", False),
-                            )
-                        )
-
-                    if breaches:
-                        await self.event_bus.emit(
-                            EventType.OSINT_BREACH_DETECTED,
-                            {"email": email, "count": len(breaches)},
-                            source="osint_hunter",
-                        )
-
-                elif response.status_code == 404:
-                    pass  # No breaches found
-                else:
-                    logger.warning(f"HIBP API error: {response.status_code}")
-
+            return converted_breaches
         except Exception as e:
-            logger.error(f"Breach check failed: {e}")
-
-        return breaches
+            logger.error(f"All breach check providers failed: {e}")
+            # Retorna vazio ao invés de crashar (graceful degradation)
+            return []
 
     def get_google_dorks(self, domain: str) -> List[Dict[str, str]]:
         """

@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Glass Panel Effect - Refinado com borda interna */
+  .glass-panel {
+    @apply bg-background-card/40 backdrop-blur-xl border border-white/5 shadow-glass-inner transition-all duration-500;
+  }
+  
+  .glass-panel:hover {
+    @apply border-white/10 bg-background-card/50;
+  }
+
+  /* Magnetic Glow Effect */
+  .btn-neon {
+    @apply relative overflow-hidden transition-all duration-300 active:scale-95;
+  }
+  
+  .btn-neon::after {
+    content: '';
+    @apply absolute inset-0 bg-white/5 opacity-0 transition-opacity duration-300;
+  }
+  
+  .btn-neon:hover::after {
+    @apply opacity-100;
+  }
+
+  /* Active Agent Indicator - Sutil e elegante */
+  .active-agent-glow {
+    @apply relative overflow-hidden bg-primary/5 !important;
+  }
+  
+  .active-agent-glow::before {
+    content: '';
+    @apply absolute left-0 top-0 h-full w-0.5 bg-primary shadow-[0_0_15px_#00f2ff];
+    animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slide-in {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+  }
+
+  /* Neural Heartbeat Animation */
+  .heartbeat-line {
+    stroke-dasharray: 100;
+    animation: dash 2s linear infinite;
+  }
+
+  @keyframes dash {
+    from { stroke-dashoffset: 100; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Visionary Scanline Effect */
+  .animate-scanline {
+    animation: scanline 2s linear infinite;
+  }
+
+  @keyframes scanline {
+    0% { top: 0%; opacity: 0; }
+    50% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .scanning-glitch {
+    animation: glitch 0.3s ease-in-out infinite;
+  }
+
+  @keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-1px, 1px); }
+    40% { transform: translate(-1px, -1px); }
+    60% { transform: translate(1px, 1px); }
+    80% { transform: translate(1px, -1px); }
+    100% { transform: translate(0); }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background-dark text-slate-400 font-display antialiased tracking-tight;
+  }
+  
+  h1, h2, h3, h4 {
+    @apply text-slate-200 tracking-tightest;
+  }
+}
+
+/* Typing Cursor for Logs */
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

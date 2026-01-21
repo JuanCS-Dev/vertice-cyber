@@ -74,7 +74,7 @@ class TestComplianceClientCoverage:
         with (
             patch("tools.compliance.client.Path.exists", return_value=True),
             patch("aiofiles.open") as mock_open,
-            patch("json.loads", return_value=mock_data) ,
+            patch("json.loads", return_value=mock_data),
             patch("tools.compliance.client.datetime") as mock_datetime,
         ):
             # Mock file context manager

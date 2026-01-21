@@ -8,6 +8,7 @@ from fastmcp import Context
 
 from tools.vertex_ai import get_vertex_ai
 
+
 async def ai_threat_analysis(
     ctx: Context,
     target: str,

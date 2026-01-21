@@ -4,7 +4,6 @@ Testes para garantir que os imports antigos ainda funcionam.
 """
 
 
-
 def test_compliance_module_imports():
     """Test that old compliance module imports still work."""
     from tools.compliance import (

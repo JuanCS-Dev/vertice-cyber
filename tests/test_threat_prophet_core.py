@@ -16,9 +16,10 @@ class TestThreatProphetCore:
     def prophet(self):
         """Create threat prophet for testing."""
         from unittest.mock import AsyncMock
+
         with (
             patch("tools.threat.get_settings") as mock_settings,
-            patch("tools.threat.get_agent_memory") ,
+            patch("tools.threat.get_agent_memory"),
             patch("tools.threat.get_event_bus") as mock_bus,
         ):
             mock_settings.return_value.data_dir = "/tmp/test"

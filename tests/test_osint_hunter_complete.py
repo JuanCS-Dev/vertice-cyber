@@ -21,7 +21,7 @@ class TestOSINTHunterCompleteCoverage:
 
         with (
             patch("tools.osint.get_settings") as mock_settings,
-            patch("tools.osint.get_agent_memory") ,
+            patch("tools.osint.get_agent_memory"),
             patch("tools.osint.get_event_bus") as mock_bus,
         ):
             mock_settings.return_value.api_keys.hibp_api_key = None
@@ -40,7 +40,7 @@ class TestOSINTHunterCompleteCoverage:
             mock_response.text = "Test content"
             # Return proper mock response for check_breach
             mock_response.status_code = 404
-            
+
             mock_session = AsyncMock()
             mock_session.get = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value = mock_session
@@ -59,7 +59,7 @@ class TestOSINTHunterCompleteCoverage:
             mock_response = MagicMock()
             mock_response.text = "Malicious content detected"
             mock_response.status_code = 404
-            
+
             mock_session = AsyncMock()
             mock_session.get = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value = mock_session
@@ -80,10 +80,15 @@ class TestOSINTHunterCompleteCoverage:
             mock_response.status_code = 200
             mock_response.json = MagicMock(
                 return_value=[
-                    {"Name": "TestBreach", "BreachDate": "2020-01-01", "DataClasses": [], "IsVerified": True}
+                    {
+                        "Name": "TestBreach",
+                        "BreachDate": "2020-01-01",
+                        "DataClasses": [],
+                        "IsVerified": True,
+                    }
                 ]
             )
-            
+
             mock_session = AsyncMock()
             mock_session.get = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value = mock_session
@@ -134,7 +139,14 @@ class TestOSINTHunterCompleteCoverage:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json = MagicMock(
-            return_value=[{"Name": "TestBreach", "BreachDate": "2020-01-01", "DataClasses": [], "IsVerified": True}]
+            return_value=[
+                {
+                    "Name": "TestBreach",
+                    "BreachDate": "2020-01-01",
+                    "DataClasses": [],
+                    "IsVerified": True,
+                }
+            ]
         )
 
         with patch("httpx.AsyncClient") as mock_client_class:

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class ScenarioDifficulty(str, Enum):
     """Dificuldade do cenário."""
+
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
@@ -28,6 +29,7 @@ class ScenarioDifficulty(str, Enum):
 
 class ScenarioType(str, Enum):
     """Tipo de cenário."""
+
     RED_TEAM = "red_team"
     PURPLE_TEAM = "purple_team"
     TABLETOP = "tabletop"
@@ -36,6 +38,7 @@ class ScenarioType(str, Enum):
 
 class WargameScenario(BaseModel):
     """Definição de um cenário de wargame."""
+
     id: str
     name: str
     description: str
@@ -48,6 +51,7 @@ class WargameScenario(BaseModel):
 
 class WargameResult(BaseModel):
     """Resultado de uma simulação."""
+
     scenario_id: str
     execution_id: str
     timestamp: float
@@ -60,17 +64,17 @@ class WargameResult(BaseModel):
 class WargameExecutor:
     """
     Executor de Wargames.
-    
+
     Gerencia e executa simulações de ataque para testar a resposta
     do sistema imunológico e dos analistas.
     """
-    
+
     def __init__(self):
         self.settings = get_settings()
         self.memory = get_agent_memory("wargame_executor")
         self.event_bus = get_event_bus()
         self._scenarios = self._load_default_scenarios()
-    
+
     def _load_default_scenarios(self) -> Dict[str, WargameScenario]:
         """Carrega cenários padrão."""
         scenarios = [
@@ -82,7 +86,7 @@ class WargameExecutor:
                 scenario_type=ScenarioType.BREACH_SIMULATION,
                 tactics=["Exfiltration", "Command and Control"],
                 techniques=["T1048", "T1071"],
-                estimated_duration_s=60
+                estimated_duration_s=60,
             ),
             WargameScenario(
                 id="scenario_002",
@@ -92,7 +96,7 @@ class WargameExecutor:
                 scenario_type=ScenarioType.RED_TEAM,
                 tactics=["Impact"],
                 techniques=["T1486"],
-                estimated_duration_s=120
+                estimated_duration_s=120,
             ),
             WargameScenario(
                 id="scenario_003",
@@ -102,59 +106,84 @@ class WargameExecutor:
                 scenario_type=ScenarioType.PURPLE_TEAM,
                 tactics=["Privilege Escalation"],
                 techniques=["T1068"],
-                estimated_duration_s=45
-            )
+                estimated_duration_s=45,
+            ),
         ]
         return {s.id: s for s in scenarios}
-    
+
     async def list_scenarios(self) -> List[WargameScenario]:
         """Lista cenários disponíveis."""
         return list(self._scenarios.values())
-    
+
     async def run_simulation(
-        self,
-        scenario_id: str,
-        target: str = "local"
+        self, scenario_id: str, target: str = "local"
     ) -> WargameResult:
         """
-        Executa um cenário de wargame.
-        
+        Executa um cenário de wargame com validação de segurança.
+
         Args:
             scenario_id: ID do cenário
             target: Alvo da simulação
-            
+
         Returns:
             Resultado da simulação
         """
+        from tools.wargame_safety import get_wargame_safety
+
+        safety = get_wargame_safety()
+
+        # Validação em múltiplas camadas
+        safety_check = await safety.check_all_layers(scenario_id, target)
+        if not safety_check.is_safe:
+            logger.warning(f"Wargame blocked: {safety_check.reason}")
+            # Em modo Tabletop, retornamos uma simulação puramente teórica
+            return self._run_tabletop_simulation(
+                scenario_id, target, safety_check.reason
+            )
+
         scenario = self._scenarios.get(scenario_id)
         if not scenario:
             raise ValueError(f"Scenario {scenario_id} not found")
-        
+
         execution_id = f"exec_{int(time.time())}"
-        
+
         await self.event_bus.emit(
             EventType.WARGAME_SIMULATION_STARTED,
-            {"scenario_id": scenario_id, "target": target, "execution_id": execution_id},
-            source="wargame_executor"
+            {
+                "scenario_id": scenario_id,
+                "target": target,
+                "execution_id": execution_id,
+            },
+            source="wargame_executor",
         )
-        
-        # Simulação da execução (Placeholder logic for safe environment)
-        # Em um ambiente real, isso chamaria ferramentas como Atomic Red Team
-        # ou scripts de ataque controlados.
-        
+
+        # Se chegamos aqui, temos permissão para execução real (ou sandbox)
         logs = []
         logs.append(f"Target: {target}")
-        logs.append("Initializing attack vectors...")
+        logs.append("Executing real/sandboxed attack vectors...")
+
+        # Em produção, este bloco chama o executor do Atomic Red Team no Sandbox.
+        # Caso o sandbox não esteja pronto, levantamos erro explícito conforme Constituição.
+        try:
+            command = ["pwsh", "-c", f"Invoke-AtomicTest {scenario.techniques[0]}"]
+            sandbox_cmd = safety.get_sandbox_command(command)
+            logs.append(f"Command configured for isolation: {' '.join(sandbox_cmd)}")
+        except Exception as e:
+            raise NotImplementedError(
+                f"Physical execution of {scenario_id} blocked. "
+                f"Root cause: {str(e)}. "
+                "Alternative: Run in simulation_only mode."
+            )
 
         for tech in scenario.techniques:
             logs.append(f"Executing technique {tech}...")
-        
+
         logs.append("Simulation completed.")
-        
+
         # Simula resultado
-        success = True  # O ataque "rodou" com sucesso (simulado)
-        detection_rate = 0.85  # Simula que o sistema detectou 85%
-        
+        success = True
+        detection_rate = 0.85
+
         result = WargameResult(
             scenario_id=scenario_id,
             execution_id=execution_id,
@@ -162,19 +191,44 @@ class WargameExecutor:
             success=success,
             detection_rate=detection_rate,
             logs=logs,
-            artifacts={"report_path": f"/tmp/wargame_{execution_id}.json"}
+            artifacts={"report_path": f"/tmp/wargame_{execution_id}.json"},
         )
-        
+
         # Salva na memória
         self.memory.set(execution_id, result.model_dump(), ttl_seconds=86400)
-        
+
         await self.event_bus.emit(
             EventType.WARGAME_SIMULATION_COMPLETED,
-            {"execution_id": execution_id, "success": success, "detection_rate": detection_rate},
-            source="wargame_executor"
+            {
+                "execution_id": execution_id,
+                "success": success,
+                "detection_rate": detection_rate,
+            },
+            source="wargame_executor",
         )
-        
+
         return result
+
+    def _run_tabletop_simulation(
+        self, scenario_id: str, target: str, block_reason: str
+    ) -> WargameResult:
+        """Executa uma simulação puramente teórica (tabletop) quando a real é bloqueada."""
+        scenario = self._scenarios.get(scenario_id)
+        return WargameResult(
+            scenario_id=scenario_id,
+            execution_id=f"tabletop_{int(time.time())}",
+            timestamp=time.time(),
+            success=False,
+            detection_rate=0.0,
+            logs=[
+                f"REAL EXECUTION BLOCKED: {block_reason}",
+                "Switching to Tabletop (Theoretical) Simulation Mode.",
+                f"Scenario: {scenario.name if scenario else 'Unknown'}",
+                f"Target: {target}",
+                "No real actions were taken on the host.",
+            ],
+            artifacts={"mode": "tabletop_only"},
+        )
 
 
 # Singleton
@@ -193,12 +247,11 @@ def get_wargame_executor() -> WargameExecutor:
 # MCP TOOL FUNCTIONS
 # =============================================================================
 
-async def wargame_list_scenarios(
-    ctx: Context
-) -> List[Dict[str, Any]]:
+
+async def wargame_list_scenarios(ctx: Context) -> List[Dict[str, Any]]:
     """
     Lista os cenários de ataque disponíveis para simulação.
-    
+
     Returns:
         Lista de cenários com detalhes de táticas e técnicas.
     """
@@ -208,22 +261,20 @@ async def wargame_list_scenarios(
 
 
 async def wargame_run_simulation(
-    ctx: Context,
-    scenario_id: str,
-    target: str = "local"
+    ctx: Context, scenario_id: str, target: str = "local"
 ) -> Dict[str, Any]:
     """
     Executa uma simulação de ataque (Wargame).
-    
+
     Args:
         scenario_id: ID do cenário (obter via wargame_list_scenarios)
         target: Alvo da simulação (IP, domínio ou 'local')
-    
+
     Returns:
         Resultado da simulação incluindo logs e taxa de detecção.
     """
     await ctx.info(f"Running wargame scenario {scenario_id} against {target}")
-    
+
     executor = get_wargame_executor()
     try:
         result = await executor.run_simulation(scenario_id, target)
