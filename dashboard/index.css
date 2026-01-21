@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&family=Share+Tech+Mono&display=swap');
+
+@utility tracking-alien {
+  letter-spacing: 0.35em;
+}
 
 @theme {
   /* ALIEN PALETTE: Xenomorphic Void */
@@ -32,7 +37,6 @@
   --letter-spacing-alien: 0.35em;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&family=Share+Tech+Mono&display=swap');
 
 @layer base {
   body {

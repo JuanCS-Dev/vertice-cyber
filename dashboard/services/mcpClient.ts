@@ -1,6 +1,7 @@
 /**
  * MCP Client Service - Comunicação com o Bridge HTTP.
  */
+/// <reference types="vite/client" />
 
 export interface ToolExecutionResult<T = any> {
   success: boolean;

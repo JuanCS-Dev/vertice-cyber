@@ -37,6 +37,7 @@ export default {
       letterSpacing: {
         'widest': '0.25em',
         'tightest': '-0.05em',
+        'alien': '0.35em',
       }
     },
   },

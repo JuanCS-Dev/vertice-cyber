@@ -22,8 +22,8 @@ export type OSINTConfig = z.infer<typeof OSINTConfigSchema>;
 // Checkpoint Data
 export const CheckpointDataSchema = z.object({
     step_index: z.number().int().min(0),
-    accumulated_results: z.record(z.unknown()),
-    memory_snapshot: z.record(z.unknown()),
+    accumulated_results: z.record(z.string(), z.unknown()),
+    memory_snapshot: z.record(z.string(), z.unknown()),
     last_updated: z.string().datetime()
 });
 

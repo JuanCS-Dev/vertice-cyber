@@ -269,6 +269,20 @@ export interface ReconResult {
     tool_outputs: Record<string, unknown>;
 }
 
+// --- Deepfake Scanner ---
+
+export interface DeepfakeResult {
+    is_deepfake: boolean;
+    confidence: number;
+    source: string;
+    details: {
+        reasoning: string;
+        artifacts: string[];
+        flags?: string[];
+    };
+    analyzed_at: string;
+}
+
 // =============================================================================
 // TYPE HELPERS
 // =============================================================================
@@ -282,7 +296,8 @@ export type ToolResult =
     | WargameScenario[]
     | WargameResult
     | PatchRisk
-    | ReconResult;
+    | ReconResult
+    | DeepfakeResult;
 
 /** Typed execute response for specific tools */
 export type EthicalValidateResponse = MCPToolResponse<EthicalDecision>;
@@ -293,3 +308,4 @@ export type WargameListResponse = MCPToolResponse<WargameScenario[]>;
 export type WargameRunResponse = MCPToolResponse<WargameResult>;
 export type PatchValidateResponse = MCPToolResponse<PatchRisk>;
 export type CybersecReconResponse = MCPToolResponse<ReconResult>;
+export type DeepfakeScanResponse = MCPToolResponse<DeepfakeResult>;

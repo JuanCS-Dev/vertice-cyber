@@ -179,9 +179,6 @@ export function useMCPAgents(): UseMCPAgentsReturn {
                 a.id === agent_id ? { ...a, status: newState } : a
             ));
             addLog(`🔄 Agent ${agent_id} is now ${newState}`, 'info', 'ORCHESTRATOR');
-
-            // Re-fetch to get accurate state if needed
-            fetchAgents();
         });
 
         // Handle agent status changes
@@ -208,7 +205,7 @@ export function useMCPAgents(): UseMCPAgentsReturn {
             unsubEthics();
             unsubOsint();
             unsubMaxReconnect();
-            eventStream.disconnect();
+            // Do not disconnect singleton stream
         };
     }, [addLog]);
 

@@ -82,13 +82,13 @@ export async function executeAgentAction<T = unknown>(
     toolName: string,
     args: Record<string, unknown> = {}
 ): Promise<T> {
-    const response = await mcpClient.executeTool<T>(toolName, args);
+    const response = await mcpClient.execute<T>(toolName, args);
 
     if (!response.success) {
         throw new Error(response.error || 'Action failed');
     }
 
-    return response.result as T;
+    return response.data as T;
 }
 
 /**

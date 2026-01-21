@@ -306,6 +306,66 @@ class VertexAIIntegration:
             logger.error(f"Streaming analysis failed: {e}")
             yield f"Analysis failed: {str(e)}"
 
+    async def generate_multimodal_content(
+        self,
+        prompt: str,
+        image_data: Optional[str] = None,
+        mime_type: Optional[str] = None,
+        model_name: Optional[str] = None,
+    ) -> str:
+        """
+        Generate content using Gemini 3 with multimodal support (Text + Image/Video).
+        
+        Args:
+            prompt: Text prompt
+            image_data: Base64 encoded image/video data (optional)
+            mime_type: Mime type of the media (e.g., 'image/jpeg', 'video/mp4')
+            model_name: Override default model
+            
+        Returns:
+            Generated text response
+        """
+        if not self._ensure_initialized():
+            return "Error: Vertex AI not initialized"
+
+        model = model_name or self.model_name
+        contents = []
+        
+        # Add text prompt
+        contents.append(types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=prompt)]
+        ))
+
+        # Add media if provided
+        if image_data and mime_type:
+            # Create Part from bytes
+            import base64
+            try:
+                media_bytes = base64.b64decode(image_data)
+                contents[0].parts.append(
+                    types.Part.from_bytes(data=media_bytes, mime_type=mime_type)
+                )
+            except Exception as e:
+                logger.error(f"Failed to decode media for multimodal generation: {e}")
+                return f"Error processing media: {str(e)}"
+
+        try:
+            response = self.client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    temperature=0.2,
+                    top_p=0.95,
+                    max_output_tokens=2048,
+                ),
+            )
+            return response.text or "Error: No text returned (possibly blocked)"
+
+        except Exception as e:
+            logger.error(f"Multimodal generation failed: {e}")
+            return f"Error: {str(e)}"
+
     def _parse_json_response(self, text: str) -> Dict[str, Any]:
         """Parse JSON from response, handling markdown code blocks."""
         result_text = text.strip()

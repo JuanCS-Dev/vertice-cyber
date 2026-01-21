@@ -48,6 +48,12 @@ const SynapticWeb: React.FC<{ agents: Agent[] }> = React.memo(({ agents }) => {
     return new THREE.BufferGeometry().setFromPoints(points);
   }, [agents]);
 
+  React.useEffect(() => {
+    return () => {
+      lineGeometry.dispose();
+    };
+  }, [lineGeometry]);
+
   return (
     <lineSegments geometry={lineGeometry}>
       <lineBasicMaterial color="#00f2ff" transparent opacity={0.15} linewidth={1} />

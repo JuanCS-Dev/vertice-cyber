@@ -36,8 +36,6 @@ export function useAgentControl(agentId: string) {
 
     // Subscribe to real-time state changes
     useEffect(() => {
-        const { eventStream } = require('../services/eventStream'); // Import inside effect or top level
-
         const unsub = eventStream.on('agent.lifecycle.*', (event: any) => {
             const { agent_id } = event.payload || event.data || {};
             if (agent_id !== agentId) return;

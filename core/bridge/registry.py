@@ -26,6 +26,7 @@ from tools.patch_ml import patch_validate
 
 # Multimodal
 from tools.visionary import visionary_analyze
+from tools.deepfake_scanner import scan_media
 
 # CyberSec
 from tools.cybersec_basic import cybersec_recon
@@ -73,6 +74,7 @@ TOOL_REGISTRY: Dict[str, ToolFunction] = {
     "wargame_run_simulation": wargame_run_simulation,
     "patch_validate": patch_validate,
     "visionary_analyze": visionary_analyze,
+    "deepfake_scan_tool": scan_media,
     "cybersec_recon": cybersec_recon,
     "provider_health_check": provider_health_check,
     "provider_metrics": provider_metrics_tool,
@@ -86,6 +88,17 @@ TOOL_REGISTRY: Dict[str, ToolFunction] = {
 
 # Metadata Registry
 TOOL_METADATA: List[ToolInfo] = [
+    ToolInfo(
+        name="deepfake_scan_tool",
+        agent="Visionary Sentinel",
+        category="intelligence",
+        description="Deepfake analysis for video/audio/image",
+        parameters={
+            "file_b64": "string",
+            "mime_type": "string",
+            "filename": "string",
+        },
+    ),
     ToolInfo(
         name="ethical_validate",
         agent="Ethical Magistrate",

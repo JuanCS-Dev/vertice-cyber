@@ -20,6 +20,7 @@ from tools.compliance import compliance_assess, compliance_report, compliance_ch
 from tools.wargame import wargame_list_scenarios, wargame_run_simulation
 from tools.patch_ml import patch_validate
 from tools.cybersec_basic import cybersec_recon
+from tools.deepfake_scanner import scan_media
 from tools.mcp_ai_tools import (
     ai_threat_analysis,
     ai_compliance_assessment,
@@ -228,6 +229,16 @@ async def cybersec_recon_tool(
     """Realiza reconhecimento básico (portas, web headers)."""
     result = await cybersec_recon(ctx, target, scan_ports, scan_web)
     await ctx.info(f"Recon completed for {target}")
+    return result
+
+
+@mcp.tool()
+async def deepfake_scan_tool(
+    ctx: Context, file_b64: str, mime_type: str, filename: str
+) -> Dict[str, Any]:
+    """Scans media for deepfake artifacts using Gemini 3 and heuristics."""
+    result = await scan_media(file_b64, mime_type, filename)
+    await ctx.info(f"Deepfake scan completed for {filename}")
     return result
 
 

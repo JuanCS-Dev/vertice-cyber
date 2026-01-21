@@ -255,6 +255,66 @@ async def get_snapshot():
         
     return {"agents": results, "timestamp": time.time()}
 
+
+# =============================================================================
+# WORKFLOW ENDPOINTS
+# =============================================================================
+
+@app.get("/api/v1/workflows")
+async def list_workflows():
+    """List available automated workflows."""
+    return {
+        "workflows": [
+            {
+                "id": "wf-incident-response",
+                "name": "Incident Response Protocol",
+                "description": "Automated containment and analysis of detected threats.",
+                "inputs": [{"name": "incident_id", "type": "string"}]
+            },
+            {
+                "id": "wf-vulnerability-scan",
+                "name": "Full Vulnerability Scan",
+                "description": "Deep scan of target infrastructure using all available tools.",
+                "inputs": [{"name": "target_ip", "type": "string"}]
+            },
+            {
+                "id": "wf-compliance-audit",
+                "name": "Compliance Audit Cycle",
+                "description": "End-to-end compliance verification against GDPR/HIPAA.",
+                "inputs": [{"name": "scope", "type": "string"}]
+            }
+        ]
+    }
+
+@app.post("/api/v1/workflows/run")
+async def run_workflow(request: dict):
+    """Execute a workflow."""
+    workflow_id = request.get("workflow_id")
+    inputs = request.get("inputs", {})
+    
+    # In a real implementation, this would trigger a WorkflowEngine
+    # For now, we simulate a job via Orchestrator (conceptually)
+    
+    # We use a dedicated "Workflow Agent" or just spawn a job on the 'workflows-manager' agent
+    
+    import uuid
+    job_id = f"job-{str(uuid.uuid4())[:8]}"
+    
+    # Emit event to show activity in terminal
+    from core.bridge.ws_manager import manager
+    await manager.broadcast({
+        "type": "workflow.started",
+        "source": "workflow_engine",
+        "payload": {
+            "workflow_id": workflow_id,
+            "job_id": job_id,
+            "inputs": inputs
+        }
+    })
+    
+    return {"job_id": job_id, "status": "RUNNING"}
+
+
 if __name__ == "__main__":
     import argparse
 

@@ -126,9 +126,9 @@ export const OSINTHunterPanel: React.FC = () => {
           </div>
           <div className="h-4 w-px bg-white/5" />
           <div className="flex items-center gap-4 text-slate-500">
-            <Globe className="w-3.5 h-3.5 cursor-pointer hover:text-primary transition-colors" title="DNS Map" />
-            <Mail className="w-3.5 h-3.5 cursor-pointer hover:text-primary transition-colors" title="Breach Check" />
-            <Fingerprint className="w-3.5 h-3.5 cursor-pointer hover:text-primary transition-colors" title="Google Dorks" />
+            <span title="DNS Map"><Globe className="w-3.5 h-3.5 cursor-pointer hover:text-primary transition-colors" /></span>
+            <span title="Breach Check"><Mail className="w-3.5 h-3.5 cursor-pointer hover:text-primary transition-colors" /></span>
+            <span title="Google Dorks"><Fingerprint className="w-3.5 h-3.5 cursor-pointer hover:text-primary transition-colors" /></span>
           </div>
         </div>
 

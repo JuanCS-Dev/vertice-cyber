@@ -16,7 +16,7 @@ interface AgentSidebarProps {
   systemLoad?: { cpu: number; memory: string; disk: number };
 }
 
-const IconMap: Record<string, React.ElementType> = {
+const IconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   shield: Shield,
   network: Network,
   database: Database,

@@ -25,9 +25,30 @@ export class VerticeEventStream {
     private reconnectAttempts = 0;
     private readonly MAX_RECONNECT_ATTEMPTS = 10;
     private shouldReconnect = true;
+    private messageQueue: object[] = [];
+    private incomingEventQueue: WebSocketMessage[] = [];
+    private isProcessingQueue = false;
 
     constructor(private url: string = WS_URL) {
         this.connect();
+        this.startEventLoop();
+    }
+
+    private startEventLoop() {
+        // Process events every 50ms to prevent UI blocking
+        setInterval(() => {
+            this.processEventBatch();
+        }, 50);
+    }
+
+    private processEventBatch() {
+        if (this.incomingEventQueue.length === 0) return;
+
+        const batch = this.incomingEventQueue.splice(0, 50); // Process max 50 events per tick
+        
+        batch.forEach(msg => {
+            this.dispatchToSubscribers(msg);
+        });
     }
 
     public connect(): void {
@@ -39,13 +60,25 @@ export class VerticeEventStream {
             this.ws.onopen = () => {
                 console.log('[Neural Link] Connected');
                 this.reconnectAttempts = 0;
-                this.dispatch({ type: 'system.connected', timestamp: new Date().toISOString() });
+                this.incomingEventQueue.push({ type: 'system.connected', timestamp: new Date().toISOString() });
+                
+                // Flush buffered outgoing messages
+                while (this.messageQueue.length > 0) {
+                    const msg = this.messageQueue.shift();
+                    if (msg) this.send(msg);
+                }
             };
 
             this.ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    this.dispatch(msg);
+                    // Push to queue instead of dispatching immediately
+                    this.incomingEventQueue.push(msg);
+                    // Limit queue size to prevent memory leaks during floods
+                    if (this.incomingEventQueue.length > 1000) {
+                        this.incomingEventQueue.shift(); 
+                        console.warn('[Neural Link] Event queue overflow, dropping oldest events');
+                    }
                 } catch (err) {
                     console.error('[Neural Link] Parse error:', err);
                 }
@@ -58,7 +91,7 @@ export class VerticeEventStream {
             this.ws.onclose = () => {
                 console.warn('[Neural Link] Connection closed');
                 this.ws = null;
-                this.dispatch({ type: 'system.disconnected', timestamp: new Date().toISOString() });
+                this.incomingEventQueue.push({ type: 'system.disconnected', timestamp: new Date().toISOString() });
                 if (this.shouldReconnect) {
                     this.handleReconnect();
                 }
@@ -98,7 +131,6 @@ export class VerticeEventStream {
             this.subscriptions.get(pattern)?.delete(handler);
             if (this.subscriptions.get(pattern)?.size === 0) {
                 this.subscriptions.delete(pattern);
-                // Optional: Unsubscribe from server?
             }
         };
     }
@@ -108,7 +140,7 @@ export class VerticeEventStream {
         return this.subscribe(pattern, handler);
     }
 
-    private dispatch(message: WebSocketMessage): void {
+    private dispatchToSubscribers(message: WebSocketMessage): void {
         // Dispatch to exact matches and regex matches
         for (const [pattern, handlers] of this.subscriptions) {
             if (this.matchPattern(message.type, pattern)) {
@@ -135,7 +167,8 @@ export class VerticeEventStream {
         if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(message));
         } else {
-            console.warn('[Neural Link] Socket not ready, message dropped:', message);
+            console.log('[Neural Link] Buffering message:', message);
+            this.messageQueue.push(message);
         }
     }
 
