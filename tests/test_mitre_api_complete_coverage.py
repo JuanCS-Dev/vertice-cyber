@@ -157,13 +157,12 @@ class TestMITREAPICompleteCoverage:
         assert stats["tactics"] == 1
         assert stats["actors"] == 0
 
-    def test_singleton_pattern(self):
-        """Test singleton pattern for MITRE clients."""
-        # Clear existing clients to test fresh
-        import tools.mitre_api as mitre_module
-
-        mitre_module._mitre_clients.clear()
-
+        def test_singleton_pattern(self):
+            """Test singleton pattern for MITRE clients."""
+            # Clear existing clients to test fresh
+            import tools.mitre_client as mitre_module
+        
+            mitre_module._mitre_clients.clear()
         # Mock _ensure_data_loaded to avoid async initialization
         with patch(
             "tools.mitre_api.MITREAttackAPI._ensure_data_loaded", new_callable=AsyncMock
@@ -303,15 +302,14 @@ class TestMITREAPICompleteCoverage:
         assert hasattr(mitre_client, "_frameworks")
         assert hasattr(mitre_client, "_last_update")
 
-    def test_get_mitre_client_singleton_cleared(self):
-        """Test get_mitre_client singleton after clearing."""
-        from tools.mitre_api import get_mitre_client
-
-        # Clear existing clients
-        import tools.mitre_api
-
-        tools.mitre_api._mitre_clients.clear()
-
+        def test_get_mitre_client_singleton_cleared(self):
+            """Test get_mitre_client singleton after clearing."""
+            from tools.mitre_api import get_mitre_client
+        
+            # Clear existing clients
+            import tools.mitre_client
+        
+            tools.mitre_client._mitre_clients.clear()
         # Get first instance
         client1 = get_mitre_client("enterprise")
         assert client1 is not None
@@ -324,15 +322,14 @@ class TestMITREAPICompleteCoverage:
         client3 = get_mitre_client("mobile")
         assert client1 is not client3
 
-    def test_mitre_client_different_domains(self):
-        """Test different domains create different clients."""
-        from tools.mitre_api import get_mitre_client
-
-        # Clear existing clients
-        import tools.mitre_api
-
-        tools.mitre_api._mitre_clients.clear()
-
+        def test_mitre_client_different_domains(self):
+            """Test different domains create different clients."""
+            from tools.mitre_api import get_mitre_client
+        
+            # Clear existing clients
+            import tools.mitre_client
+        
+            tools.mitre_client._mitre_clients.clear()
         client_enterprise = get_mitre_client("enterprise")
         client_mobile = get_mitre_client("mobile")
         client_ics = get_mitre_client("ics")
