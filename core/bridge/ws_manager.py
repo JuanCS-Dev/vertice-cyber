@@ -1,55 +1,80 @@
+
 """
-Bridge WebSocket Manager - Handles real-time event streaming.
+Bridge WebSocket Manager - Neural Mesh Uplink.
 ============================================================
 
-Manages connections and broadcasts EventBus events to connected clients.
+Manages connections and broadcasts Neural Mesh events to connected clients.
+Supports Room-based subscription logic (Phase 1).
 """
 
 import asyncio
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Set
 from fastapi import WebSocket, WebSocketDisconnect
 
-from core.event_bus import get_event_bus, EventType, Event
+from core.events.event_bus import get_event_bus
 
 logger = logging.getLogger("mcp_bridge.ws")
 
-
 class ConnectionManager:
     """
-    Manages WebSocket connections from multiple clients.
+    Manages WebSocket connections and channel subscriptions.
     """
 
     def __init__(self):
-        """Initialize the manager."""
         self.active_connections: List[WebSocket] = []
+        # Room logic: room_id -> Set[WebSocket]
+        self.rooms: Dict[str, Set[WebSocket]] = {}
         self._lock = asyncio.Lock()
+        
+        # Inject self into EventBus
+        event_bus = get_event_bus()
+        event_bus.set_ws_manager(self)
 
     async def connect(self, websocket: WebSocket) -> None:
         """Accept a new connection."""
         await websocket.accept()
         async with self._lock:
             self.active_connections.append(websocket)
-        logger.info(f"WebSocket connected. Total: {len(self.active_connections)}")
+        logger.info(f"Neural Link established. Total nodes: {len(self.active_connections)}")
 
     async def disconnect(self, websocket: WebSocket) -> None:
         """Remove a connection."""
         async with self._lock:
             if websocket in self.active_connections:
                 self.active_connections.remove(websocket)
-        logger.info(f"WebSocket disconnected. Total: {len(self.active_connections)}")
+            
+            # Remove from all rooms
+            for room_clients in self.rooms.values():
+                if websocket in room_clients:
+                    room_clients.remove(websocket)
+                    
+        logger.info(f"Neural Link severed. Total nodes: {len(self.active_connections)}")
+
+    async def join_room(self, websocket: WebSocket, room_id: str) -> None:
+        """Subscribe socket to a specific room/channel."""
+        async with self._lock:
+            if room_id not in self.rooms:
+                self.rooms[room_id] = set()
+            self.rooms[room_id].add(websocket)
+        logger.debug(f"Node joined room: {room_id}")
 
     async def broadcast(self, message: dict) -> None:
-        """Send a message to all connected clients."""
+        """
+        Send a message to all connected clients.
+        Future optimization: Implement granular room filtering based on message topic.
+        """
         disconnected = []
-
+        
+        # For Phase 1, we broadcast "global" events to everyone.
+        # Future: Filter by message['topic'] vs subscribed rooms.
         async with self._lock:
             for connection in self.active_connections:
                 try:
                     await connection.send_json(message)
                 except Exception as e:
-                    logger.error(f"Broadcast error: {e}")
+                    logger.error(f"Broadcast packet loss: {e}")
                     disconnected.append(connection)
 
         for conn in disconnected:
@@ -57,79 +82,47 @@ class ConnectionManager:
 
     @property
     def connection_count(self) -> int:
-        """Number of active connections."""
         return len(self.active_connections)
 
 
 # Singleton manager
 connection_manager = ConnectionManager()
 
-# Streamable events registry
-STREAMABLE_EVENTS = [
-    EventType.THREAT_DETECTED,
-    EventType.THREAT_PREDICTED,
-    EventType.THREAT_MITRE_MAPPED,
-    EventType.ETHICS_VALIDATION_REQUESTED,
-    EventType.ETHICS_VALIDATION_COMPLETED,
-    EventType.ETHICS_HUMAN_REVIEW_REQUIRED,
-    EventType.OSINT_INVESTIGATION_STARTED,
-    EventType.OSINT_INVESTIGATION_COMPLETED,
-    EventType.OSINT_BREACH_DETECTED,
-    EventType.WARGAME_SIMULATION_STARTED,
-    EventType.WARGAME_SIMULATION_COMPLETED,
-    EventType.PATCH_VALIDATION_REQUESTED,
-    EventType.PATCH_VALIDATION_COMPLETED,
-    EventType.RECON_STARTED,
-    EventType.RECON_COMPLETED,
-    EventType.SYSTEM_TOOL_CALLED,
-    EventType.SYSTEM_ERROR,
-]
-
-
 async def websocket_event_stream(websocket: WebSocket) -> None:
     """
     WebSocket handler for MCP events.
+    Handles the connection lifecycle and incoming control commands.
     """
     await connection_manager.connect(websocket)
 
-    event_bus = get_event_bus()
-    event_queue: asyncio.Queue[Event] = asyncio.Queue()
-
-    async def on_event(event: Event) -> None:
-        await event_queue.put(event)
-
-    # Register handlers
-    for event_type in STREAMABLE_EVENTS:
-        event_bus.subscribe(event_type, on_event)
-
-    # Send welcome message
     try:
-        await websocket.send_json(
-            {
-                "type": "connected",
-                "message": "Vértice Neural Link established",
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-        )
-    except Exception:
-        pass
+        # Send handshake
+        await websocket.send_json({
+            "type": "system.connected",
+            "message": "Neural Mesh Uplink Active",
+            "timestamp": datetime.utcnow().isoformat(),
+        })
 
-    try:
         while True:
             try:
-                # Wait for event with 30s heartbeat
-                event = await asyncio.wait_for(event_queue.get(), timeout=30.0)
-                await websocket.send_json(
-                    {
-                        "type": event.event_type.value,
-                        "data": event.data,
-                        "source": event.source,
-                        "timestamp": event.timestamp.isoformat(),
-                    }
-                )
-            except asyncio.TimeoutError:
-                await websocket.send_json({"type": "heartbeat"})
-    except WebSocketDisconnect:
-        pass
+                # Wait for commands from Frontend (C2)
+                # Keepalive / Command parsing
+                data = await websocket.receive_json()
+                
+                cmd_type = data.get("type")
+                if cmd_type == "subscribe":
+                    room = data.get("channel")
+                    if room:
+                        await connection_manager.join_room(websocket, room)
+                
+                elif cmd_type == "heartbeat":
+                    await websocket.send_json({"type": "system.heartbeat_ack"})
+                    
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Uplink error: {e}")
+                break
+
     finally:
         await connection_manager.disconnect(websocket)

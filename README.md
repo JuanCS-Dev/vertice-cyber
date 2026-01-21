@@ -1,8 +1,8 @@
 # 🛡️ VÉRTICE CYBER v2.4
 ### Sovereign AI-Powered Security Command Center
 
-<!-- Espaço para o seu Banner Gerado -->
-![Vértice Cyber Banner](https://via.placeholder.com/1200x400?text=VERTICE+CYBER+|+SOVEREIGN+AI+COMMAND+CENTER)
+<!-- Space for your Generated Banner -->
+![Vértice Cyber Banner](docs/assets/readme-github/banner_readme.jpeg)
 
 [![Version](https://img.shields.io/badge/version-2.4.0-cyan.svg?style=for-the-badge)]()
 [![Model](https://img.shields.io/badge/Inference-Gemini%203%20Pro%20|%20Flash-purple.svg?style=for-the-badge)]()
@@ -11,58 +11,59 @@
 
 ---
 
-## 🌌 Visão Geral
-O **Vértice Cyber** é uma infraestrutura de segurança de próxima geração baseada no protocolo **MCP (Model Context Protocol)**. Ele orquestra 7 Meta-Agentes especializados que atuam em harmonia para realizar desde auditorias éticas até simulações de wargame em tempo real, tudo governado pela constituição de código **MAXIMUS 2.0**.
+## 🌌 Overview
+**Vértice Cyber** is a next-generation security infrastructure built on the **Model Context Protocol (MCP)**. It orchestrates 8 specialized Meta-Agents working in harmony to perform tasks ranging from ethical audits to real-time wargame simulations, all governed by the **MAXIMUS 2.0** code constitution.
 
 ---
 
 ## 🖥️ Command Center Dashboard
-Interface futurista construída com **React 19**, **Tailwind CSS** e **Glassmorphism 2.0**, oferecendo telemetria em tempo real e controle total sobre a frota de agentes.
+Futuristic interface built with **React 19**, **Tailwind CSS**, and **Glassmorphism 2.0**, offering real-time telemetry and full control over the agent fleet.
 
-<!-- Espaço para o Print do Dash -->
+<!-- Space for Dashboard Print -->
 ![Dashboard Preview](https://via.placeholder.com/1200x600?text=DASHBOARD+PREVIEW+|+NEURAL+BRIDGE+ACTIVE)
 
 ---
 
-## 🤖 A Frota de Meta-Agentes
+## 🤖 The Meta-Agent Fleet
 
-| Agente | Especialidade | Capacidade Principal |
+| Agent | Specialty | Core Capability |
 |:---|:---|:---|
-| **⚖️ Ethical Magistrate** | Governança | Validação em 7 fases contra frameworks éticos. |
-| **🔍 OSINT Hunter** | Inteligência | Investigação profunda de alvos com Smart Cache e IA. |
-| **🔮 Threat Prophet** | Predição | Mapeamento MITRE ATT&CK e predição de vetores. |
-| **🛡️ Compliance Guardian** | Auditoria | Avaliação automatizada de frameworks (GDPR, LGPD, etc). |
-| **🛠️ CyberSec Investigator** | Reconhecimento | Port scanning e análise de cabeçalhos web avançada. |
-| **🧬 Patch Validator ML** | Defesa | Análise de segurança em patches de código via Machine Learning. |
-| **⚔️ Wargame Executor** | Ofensiva | Simulação de cenários de ataque em Sandbox Docker isolado. |
+| **⚖️ Ethical Magistrate** | Governance | 7-phase validation against ethical frameworks. |
+| **🔍 OSINT Hunter** | Intelligence | Deep target investigation with Smart Cache and AI. |
+| **🔮 Threat Prophet** | Prediction | MITRE ATT&CK mapping and vector prediction. |
+| **🛡️ Compliance Guardian** | Audit | Automated framework assessment (GDPR, HIPAA, etc). |
+| **🛠️ CyberSec Investigator** | Reconnaissance | Advanced port scanning and web header analysis. |
+| **🧬 Patch Validator ML** | Defense | ML-based security analysis of code patches. |
+| **👁️ Visionary Sentinel** | Multimodal | Forensic analysis of images and documents via Computer Vision. |
+| **⚔️ Wargame Executor** | Offensive | Attack scenario simulation in isolated Docker Sandbox. |
 
 ---
 
-## 🧠 Motor de Inferência: Gemini 3 Series
-O sistema utiliza a arquitetura **Dual-Brain** via Vertex AI, permitindo alternar entre modelos em tempo real para otimizar latência e profundidade:
+## 🧠 Inference Engine: Gemini 3 Series
+The system utilizes a **Dual-Brain** architecture via Vertex AI, enabling real-time model switching to optimize latency and depth:
 
-- **Gemini 3 Pro**: Para análises complexas, auditorias de código e decisões éticas críticas.
-- **Gemini 3 Flash**: Para triagem rápida, recon inicial e respostas de baixa latência.
-
----
-
-## 🔬 Validação Científica (PTC-02)
-Todos os componentes são submetidos a testes rigorosos de latência e precisão.
-- **Taxa de Sucesso de Agentes**: 100%
-- **Latência de Heurística**: < 10ms
-- **Fallback Automático**: Ativo para 100% dos providers externos.
+- **Gemini 3 Pro**: For complex analysis, code audits, and critical ethical decisions.
+- **Gemini 3 Flash**: For rapid triage, initial recon, and low-latency responses.
 
 ---
 
-## 📜 Constituição Maximus 2.0
-Este projeto opera sob os princípios rigorosos da **[Code Constitution](./docs/CODE_CONSTITUTION.md)**:
-- **Soberania da Intenção**: O código serve apenas ao propósito do usuário.
-- **Obrigação da Verdade**: Zero placeholders ou mocks em produção.
-- **Modularismo Semântico**: Arquivos < 500 linhas para máxima manutenibilidade.
+## 🔬 Scientific Validation (PTC-02)
+All components undergo rigorous latency and accuracy testing.
+- **Agent Success Rate**: 100%
+- **Heuristic Latency**: < 10ms
+- **Automatic Fallback**: Active for 100% of external providers.
 
 ---
 
-## 🚀 Instalação Rápida
+## 📜 Maximus 2.0 Constitution
+This project operates under the strict principles of the **[Code Constitution](./docs/CODE_CONSTITUTION.md)**:
+- **Sovereignty of Intent**: Code serves only the user's purpose.
+- **Obligation of Truth**: Zero placeholders or mocks in production.
+- **Semantic Modularism**: Files < 500 lines for maximum maintainability.
+
+---
+
+## 🚀 Quick Install
 
 1. **Backend (FastAPI)**:
    ```bash
@@ -77,19 +78,19 @@ Este projeto opera sob os princípios rigorosos da **[Code Constitution](./docs/
    npm run dev
    ```
 
-3. **Validação**:
+3. **Validation**:
    ```bash
    python scripts/scientific_test_suite.py
    ```
 
 ---
 
-## 🛠️ Stack Tecnológica
-- **Linguagem**: Python 3.11+, TypeScript 5.8
+## 🛠️ Tech Stack
+- **Language**: Python 3.11+, TypeScript 5.8
 - **Frameworks**: FastAPI, FastMCP, React 19, Tailwind CSS
-- **IA**: Google Vertex AI (Gemini 3 SDK)
+- **AI**: Google Vertex AI (Gemini 3 SDK)
 - **Data**: Redis (Cache), Docker (Sandbox)
 
 ---
 
-**Construído com integridade pela Maximus 2.0 Team | Governed by Vértice values**
+**Built with integrity by Maximus 2.0 Team | Governed by Vértice values**

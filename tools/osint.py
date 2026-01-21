@@ -9,9 +9,11 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+
 from core.settings import get_settings
 from core.event_bus import get_event_bus, EventType
 from core.memory import get_agent_memory
+from core.jobs.job_manager import JobManager
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class InvestigationDepth(str, Enum):
     """Profundidade da investigação."""
 
     BASIC = "basic"
+    SHALLOW = "shallow"
     DEEP = "deep"
     EXHAUSTIVE = "exhaustive"
 
@@ -69,13 +72,14 @@ class OSINTHunter:
         self.settings = get_settings()
         self.memory = get_agent_memory("osint_hunter")
         self.event_bus = get_event_bus()
+        self.job_manager = JobManager()
         self.hibp_api_key = None
 
         if self.settings.api_keys.hibp_api_key:
             self.hibp_api_key = self.settings.api_keys.hibp_api_key.get_secret_value()
 
     async def investigate(
-        self, target: str, depth: InvestigationDepth = InvestigationDepth.BASIC
+        self, target: str, depth: InvestigationDepth = InvestigationDepth.BASIC, job_id: Optional[str] = None
     ) -> OSINTResult:
         """
         Executa investigação OSINT completa.
@@ -83,13 +87,19 @@ class OSINTHunter:
         Args:
             target: Email, domínio, ou IP
             depth: Profundidade da investigação
+            job_id: Optional Job ID for control (pause/resume/cancel)
 
         Returns:
             OSINTResult com todos os achados
         """
+        if job_id:
+            # Check for immediate cancellation/pause before starting
+            if await self.job_manager.should_yield(job_id):
+                await self.job_manager.wait_for_resume(job_id)
+
         await self.event_bus.emit(
             EventType.OSINT_INVESTIGATION_STARTED,
-            {"target": target, "depth": depth.value},
+            {"target": target, "depth": depth.value, "job_id": job_id},
             source="osint_hunter",
         )
 
@@ -103,12 +113,16 @@ class OSINTHunter:
         else:
             await self._investigate_ip(target, result)
 
+        # Check yield again after heavy work
+        if job_id and await self.job_manager.should_yield(job_id):
+             await self.job_manager.wait_for_resume(job_id)
+
         # Calcula risk score
         result.risk_score = self._calculate_risk(result)
 
         # Cache result
         cache_key = f"investigation:{target}:{depth.value}"
-        self.memory.set(cache_key, result.model_dump(), ttl_seconds=3600)
+        await self.memory.set(cache_key, result.model_dump(), ttl_seconds=3600)
 
         await self.event_bus.emit(
             EventType.OSINT_INVESTIGATION_COMPLETED,

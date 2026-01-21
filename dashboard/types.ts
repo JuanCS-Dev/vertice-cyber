@@ -1,10 +1,16 @@
-import * as THREE from 'three';
+// Types for Vértice Cyber Dashboard
 
 export enum AgentStatus {
   IDLE = 'IDLE',
   SCANNING = 'SCANNING',
   ENGAGED = 'ENGAGED',
   OFFLINE = 'OFFLINE',
+  // New lifecycle states
+  SPAWNED = 'SPAWNED',
+  RUNNING = 'RUNNING',
+  PAUSED = 'PAUSED',
+  TERMINATED = 'TERMINATED',
+  ERROR = 'ERROR',
 }
 
 export interface Agent {
@@ -50,9 +56,9 @@ export const generateAgents = (count: number): Agent[] => {
 
     const x = Math.cos(theta) * radius;
     const z = Math.sin(theta) * radius;
-    
+
     // Scale up radius for scene
-    const R = 4; 
+    const R = 4;
 
     agents.push({
       id: `AG-${100 + i}`,

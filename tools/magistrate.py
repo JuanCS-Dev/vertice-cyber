@@ -97,13 +97,13 @@ class EthicalMagistrate:
                 result.conditions.append("Human review required for sensitive action")
                 result.reasoning = "Action contains dangerous keywords"
                 await self._emit_human_review(action, actor)
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Phase 2: Always require approval check
             if self._always_requires_approval(action):
                 result.decision_type = DecisionType.REQUIRES_HUMAN_REVIEW
                 result.conditions.append("This action type always requires approval")
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Phase 3: Privacy check
             if context.get("has_pii") or context.get("personal_data"):
@@ -111,21 +111,21 @@ class EthicalMagistrate:
                 result.is_approved = True
                 result.conditions.append("Approved with privacy safeguards")
                 result.conditions.append("PII must be masked in logs")
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Phase 4: Fairness check - ensure no discrimination
             if not self._check_fairness(action, context):
                 result.decision_type = DecisionType.REJECTED_BY_ETHICS
                 result.conditions.append("Action may introduce unfair bias")
                 result.reasoning = "Fairness check failed"
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Phase 5: Transparency check - ensure explainability
             if not self._check_transparency(action, context):
                 result.decision_type = DecisionType.APPROVED_WITH_CONDITIONS
                 result.conditions.append("Enhanced logging required for transparency")
                 result.conditions.append("Audit trail must be maintained")
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Phase 6: Accountability check - ensure responsibility
             if not self._check_accountability(action, context):
@@ -133,14 +133,14 @@ class EthicalMagistrate:
                 result.conditions.append("Human accountability required")
                 result.reasoning = "Accountability check requires human oversight"
                 await self._emit_human_review(action, actor)
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Phase 7: Security check - final security validation
             if not self._check_security(action, context):
                 result.decision_type = DecisionType.REJECTED_BY_GOVERNANCE
                 result.conditions.append("Security vulnerability detected")
                 result.reasoning = "Security check failed"
-                return self._finalize(result, start_time)
+                return await self._finalize(result, start_time)
 
             # Default: Approved
             result.decision_type = DecisionType.APPROVED
@@ -151,7 +151,7 @@ class EthicalMagistrate:
             result.decision_type = DecisionType.ERROR
             result.rejection_reasons.append(f"Validation error: {str(e)}")
 
-        return self._finalize(result, start_time)
+        return await self._finalize(result, start_time)
 
     def _is_dangerous(self, action: str) -> bool:
         """Verifica se ação contém keywords perigosas."""
@@ -163,12 +163,12 @@ class EthicalMagistrate:
         action_lower = action.lower()
         return any(kw in action_lower for kw in self.settings.always_require_approval)
 
-    def _finalize(self, result: EthicalDecision, start_time: float) -> EthicalDecision:
+    async def _finalize(self, result: EthicalDecision, start_time: float) -> EthicalDecision:
         """Finaliza decisão com duração."""
         result.duration_ms = (time.time() - start_time) * 1000
 
         # Armazena na memória
-        self.memory.set(result.decision_id, result.model_dump())
+        await self.memory.set(result.decision_id, result.model_dump())
 
         return result
 

@@ -11,6 +11,8 @@ from fastmcp import FastMCP, Context
 
 from core.settings import settings
 from core.memory import get_memory_pool
+from core.database import get_db
+from core.state.orchestrator import get_orchestrator
 from tools.magistrate import ethical_validate
 from tools.osint import osint_investigate, osint_breach_check, osint_google_dork
 from tools.threat import threat_analyze, threat_intelligence, threat_predict
@@ -247,7 +249,9 @@ mcp.tool()(ai_integrated_assessment)
 # Alternative: Manual initialization in main()
 if not hasattr(mcp, "on_startup"):
     # Manual initialization until FastMCP supports hooks
-    _ = get_memory_pool()  # Initialize memory pool
+    _ = get_db() # Initialize SQLite DB
+    _ = get_orchestrator() # Initialize Agent Orchestrator
+    _ = get_memory_pool()  # Initialize legacy memory pool
 
 
 # =============================================================================

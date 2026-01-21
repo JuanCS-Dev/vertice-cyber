@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Terminal, ShieldAlert, Play, List, Loader2, AlertTriangle, Monitor, Activity } from 'lucide-react';
 import { mcpClient } from '../../services/mcpClient';
+import { AgentControlCard } from './AgentControlCard';
+import { LiveTerminal } from '../CommandCenter/LiveTerminal';
 
 export const WargameExecutorPanel: React.FC = () => {
   const [scenarios, setScenarios] = useState<any[]>([]);
-  const [selectedScenario, setSelectedAgentScenario] = useState<string | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
   const [target, setTarget] = useState('local');
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -25,12 +27,12 @@ export const WargameExecutorPanel: React.FC = () => {
     if (!selectedScenario) return;
     setIsExecuting(true);
     setResult(null);
-    
+
     const resp = await mcpClient.execute('wargame_run_simulation', {
       scenario_id: selectedScenario,
       target: target
     });
-    
+
     if (resp.success) {
       setResult(resp.data);
     }
@@ -54,7 +56,7 @@ export const WargameExecutorPanel: React.FC = () => {
               ) : scenarios.map(s => (
                 <button
                   key={s.id}
-                  onClick={() => setSelectedAgentScenario(s.id)}
+                  onClick={() => setSelectedScenario(s.id)}
                   className={`w-full text-left p-3 rounded-lg border transition-all mb-2 ${selectedScenario === s.id ? 'bg-primary/10 border-primary/30' : 'bg-transparent border-transparent hover:bg-white/5'}`}
                 >
                   <div className="flex justify-between items-center mb-1">
@@ -70,58 +72,54 @@ export const WargameExecutorPanel: React.FC = () => {
 
         {/* Execution Console (Center/Right) */}
         <div className="lg:col-span-8 flex flex-col gap-4">
-          <div className="bg-black/20 rounded-xl border border-white/5 p-4 flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Simulation Target</label>
-                <div className="relative">
-                  <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    type="text"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg py-2 pl-10 text-sm text-white focus:outline-none focus:border-primary/50"
-                  />
+
+          {/* C2 Hub */}
+          <div className="flex gap-4">
+            <div className="w-1/2">
+              <AgentControlCard
+                agentId="wargame_executor"
+                agentType="WARGAME EXECUTOR"
+              />
+            </div>
+            <div className="w-1/2 bg-black/20 rounded-xl border border-white/5 p-4 flex flex-col gap-4 justify-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Simulation Target</label>
+                  <div className="relative">
+                    <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="text"
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-lg py-2 pl-10 text-sm text-white focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={handleRun}
-                  disabled={!selectedScenario || isExecuting}
-                  className="w-full py-2.5 bg-status-error/80 text-white font-bold rounded-lg hover:bg-status-error transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)] flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  INITIATE SIMULATION
-                </button>
+                <div className="flex items-end">
+                  <button
+                    onClick={handleRun}
+                    disabled={!selectedScenario || isExecuting}
+                    className="w-full py-2.5 bg-status-error/80 text-white font-bold rounded-lg hover:bg-status-error transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)] flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    INITIATE SIMULATION
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 bg-black/40 rounded-xl border border-white/5 font-mono text-[11px] overflow-hidden flex flex-col">
+          <div className="flex-1 bg-black/40 rounded-xl border border-white/5 font-mono text-[11px] overflow-hidden flex flex-col min-h-[400px]">
             <div className="px-4 py-2 border-b border-white/5 bg-black/40 flex justify-between items-center">
-              <span className="text-slate-500 uppercase font-bold text-[9px] tracking-widest">Execution Log</span>
+              <span className="text-slate-500 uppercase font-bold text-[9px] tracking-widest">Neural Execution Stream</span>
               {result && <span className="text-[9px] px-2 py-0.5 rounded bg-status-online/10 text-status-online border border-status-online/20 uppercase font-bold">COMPLETED</span>}
             </div>
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-1.5">
-              {isExecuting && (
-                <div className="flex flex-col gap-1.5 animate-pulse">
-                  <p className="text-slate-500">[SYSTEM] Provisioning sandbox environment...</p>
-                  <p className="text-slate-500">[SYSTEM] Loading attack vectors...</p>
-                  <p className="text-primary">[WARGAME] Initializing technique sequence...</p>
-                </div>
-              )}
-              {result ? result.logs.map((log: string, i: number) => (
-                <p key={i} className="text-slate-300 leading-relaxed">
-                  <span className="text-slate-600">[{new Date().toLocaleTimeString()}]</span> {log}
-                </p>
-              )) : !isExecuting && (
-                <div className="h-full flex flex-col items-center justify-center text-slate-700 opacity-50 italic">
-                  <Terminal className="w-12 h-12 mb-2" />
-                  Select a scenario and initiate to see execution logs
-                </div>
-              )}
+
+            {/* Live Terminal Integration */}
+            <div className="flex-1 h-full min-h-0 relative">
+              <LiveTerminal filter="wargame_executor" />
             </div>
-            
+
             {result && (
               <div className="p-4 border-t border-white/5 bg-black/40 grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1">

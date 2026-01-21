@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { mcpClient } from '../services/mcpClient';
 import { eventStream } from '../services/eventStream';
-import type { Agent, AgentStatus, Threat } from '../types';
+import { Agent, AgentStatus, Threat } from '../types';
 // Types are inline - MCP bridge provides the data
 import { generateAgents } from '../types'; // For 3D positions
 
@@ -26,6 +26,21 @@ export interface UseMCPAgentsReturn {
     error: string | null;
     refetch: () => Promise<void>;
 }
+
+// Mapping of tool categories to human-readable roles
+const CATEGORY_TO_ROLE: Record<string, 'Guardian' | 'Hunter' | 'Analyst'> = {
+    'security': 'Guardian',
+    'intelligence': 'Analyst',
+    'recon': 'Hunter',
+    'compliance': 'Guardian',
+    'offensive': 'Hunter',
+    'defense': 'Guardian',
+    'malware': 'Analyst',
+    'forensics': 'Analyst',
+    'osint': 'Hunter',
+    'ethics': 'Guardian',
+    'network': 'Guardian',
+};
 
 export function useMCPAgents(): UseMCPAgentsReturn {
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -58,61 +73,47 @@ export function useMCPAgents(): UseMCPAgentsReturn {
             setIsLoading(true);
             setError(null);
 
-            // Health check first
-            const health = await mcpClient.health();
-            if (health.status !== 'healthy') {
-                throw new Error('MCP server is not healthy');
-            }
+            // Fetch real metrics from backend
+            // Note: This endpoint now returns the unified source of truth (DB + System Metrics)
+            const response = await fetch('/api/v1/agents/metrics');
+            if (!response.ok) throw new Error('Failed to fetch agent metrics');
 
-            // Fetch tools
-            const toolsResponse = await mcpClient.listTools();
-            const tools = toolsResponse.tools;
+            const data = await response.json();
 
-            // Group tools by agent
-            const agentMap = new Map<string, any[]>();
-            for (const tool of tools) {
-                const agentName = tool.agent;
-                if (!agentMap.has(agentName)) {
-                    agentMap.set(agentName, []);
-                }
-                agentMap.get(agentName)!.push(tool);
-            }
+            // Map backend data to frontend Agent interface
+            const realAgents: Agent[] = data.agents.map((a: any, index: number) => ({
+                id: a.id,
+                name: a.name,
+                role: 'Specialist', // Could be derived from type if needed
+                status: a.status,
+                health: a.health,
+                cpuLoad: a.cpuLoad,
+                memoryMB: a.memoryMB,
+                tasksCompleted: a.tasksCompleted,
+                // Keep 3D position logic if needed, or let UI handle it
+                position: [0, 0, 0] // Placeholder, UI layout handles this
+            }));
 
-            // Generate positions using existing algorithm
-            const generatedAgents = generateAgents(agentMap.size);
+            // If we have 3D visualization generation logic, apply it here
+            // merging simple list with positions
+            const positionedAgents = generateAgents(realAgents.length).map((pos, i) => ({
+                ...realAgents[i],
+                ...pos // Overwrite ID/Name/etc if generateAgents is mock-heavy, careful!
+                // Actually generateAgents returns full mock objects. 
+                // We should just assume generateAgents provides positions.
+                // For now, let's trust the backend data.
+            }));
 
-            // Merge MCP data with generated positions
-            let index = 0;
-            const mergedAgents: Agent[] = [];
-
-            for (const [agentName, agentTools] of agentMap) {
-                const category = agentTools[0]?.category || 'intelligence';
-                const role = CATEGORY_TO_ROLE[category] || 'Analyst';
-                const genAgent = generatedAgents[index] || generatedAgents[0];
-
-                mergedAgents.push({
-                    ...genAgent,
-                    id: `AG-${100 + index}`,
-                    name: agentName,
-                    role,
-                    status: 'IDLE' as AgentStatus,
-                    health: 100,
-                    cpuLoad: Math.floor(Math.random() * 30) + 10,
-                });
-
-                index++;
-            }
-
-            setAgents(mergedAgents);
-            addLog(`✅ Loaded ${tools.length} tools from ${mergedAgents.length} agents`);
+            // Fix: generateAgents returns full mock objects. We want just layout.
+            // Let's rely on the backend data primarily.
+            setAgents(realAgents);
+            setIsConnected(true);
 
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Failed to fetch agents';
             setError(errorMsg);
             addLog(`❌ Error: ${errorMsg}`);
-
-            // Fallback to generated agents
-            setAgents(generateAgents(12));
+            // Do NOT fallback to random data - show error state
         } finally {
             setIsLoading(false);
         }
@@ -144,8 +145,8 @@ export function useMCPAgents(): UseMCPAgentsReturn {
             if (event.type.includes('warning')) level = 'warn';
 
             addLog(
-                `${event.type.replace(/\./g, ' ').toUpperCase()}`, 
-                level, 
+                `${event.type.replace(/\./g, ' ').toUpperCase()}`,
+                level,
                 (event.source || 'MCP').toUpperCase()
             );
         });
@@ -161,6 +162,26 @@ export function useMCPAgents(): UseMCPAgentsReturn {
                 status: 'DETECTED',
             };
             setThreats(prev => [newThreat, ...prev.slice(0, 9)]);
+        });
+
+        // Handle Real-Time Agent State Updates
+        const unsubAgentState = eventStream.on('agent.lifecycle.*', (event: any) => {
+            const { agent_id } = event.payload || event.data || {};
+            if (!agent_id) return;
+
+            let newState: AgentStatus = AgentStatus.IDLE;
+            if (event.type.includes('resumed') || event.type.includes('spawned')) newState = AgentStatus.IDLE;
+            if (event.type.includes('running')) newState = AgentStatus.RUNNING;
+            if (event.type.includes('paused')) newState = AgentStatus.PAUSED;
+            if (event.type.includes('terminated')) newState = AgentStatus.TERMINATED;
+
+            setAgents(prev => prev.map(a =>
+                a.id === agent_id ? { ...a, status: newState } : a
+            ));
+            addLog(`🔄 Agent ${agent_id} is now ${newState}`, 'info', 'ORCHESTRATOR');
+
+            // Re-fetch to get accurate state if needed
+            fetchAgents();
         });
 
         // Handle agent status changes
@@ -183,6 +204,7 @@ export function useMCPAgents(): UseMCPAgentsReturn {
             unsubDisconnect();
             unsubAll();
             unsubThreat();
+            unsubAgentState();
             unsubEthics();
             unsubOsint();
             unsubMaxReconnect();

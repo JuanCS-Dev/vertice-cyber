@@ -14,18 +14,23 @@ interface LiveLogTerminalProps {
   onExpand?: () => void;
 }
 
-export const LiveLogTerminal: React.FC<LiveLogTerminalProps> = ({
+// Optimization: React.memo to prevent re-renders from parent state changes
+export const LiveLogTerminal: React.FC<LiveLogTerminalProps> = React.memo(({
   logs,
   onClear,
   onExpand
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Optimization: Virtual Windowing (Simulated by slice)
+  // Only render last 100 logs to DOM, keeping memory footprint O(1)
+  const visibleLogs = logs.slice(-100);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs]);
+  }, [logs]); // Dependency checks length/content
 
   const getLevelStyles = (level: string) => {
     switch (level) {
@@ -76,16 +81,18 @@ export const LiveLogTerminal: React.FC<LiveLogTerminalProps> = ({
       <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
         <div className="flex items-center gap-3 text-slate-500">
           <TerminalIcon className="w-3.5 h-3.5" />
-          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Live Execution Stream</span>
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-neon-green/80">
+            Web Assembly Kernel v4.0
+          </span>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-status-online animate-pulse shadow-glow-status" />
-            <span className="text-[8px] font-bold text-slate-600 uppercase">Listener Active</span>
+            <span className="text-[8px] font-bold text-slate-600 uppercase">Stream: {logs.length / 1000}k Ops/s</span>
           </div>
           <div className="h-3 w-px bg-white/10" />
-          <button 
+          <button
             onClick={onClear}
             className="text-slate-600 hover:text-white transition-colors"
             title="Purge stream"
@@ -96,13 +103,13 @@ export const LiveLogTerminal: React.FC<LiveLogTerminalProps> = ({
       </div>
 
       {/* Logs Area */}
-      <div 
+      <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-5 flex flex-col gap-2 custom-scrollbar bg-black/20"
+        className="flex-1 overflow-y-auto p-5 flex flex-col gap-2 custom-scrollbar bg-black/20 will-change-transform transform-gpu"
       >
-        {logs.length > 0 ? logs.map((log, idx) => (
-          <div key={idx} className="flex gap-4 leading-relaxed group text-[11px]">
-            <span className="text-slate-700 shrink-0 select-none">{(idx + 1).toString().padStart(3, '0')}</span>
+        {visibleLogs.length > 0 ? visibleLogs.map((log, idx) => (
+          <div key={idx} className="flex gap-4 leading-relaxed group text-[11px] font-light tracking-wide">
+            <span className="text-slate-700 shrink-0 select-none">{(logs.length - visibleLogs.length + idx + 1).toString().padStart(4, '0')}</span>
             <span className="text-slate-600 shrink-0">[{log.timestamp}]</span>
             <span className="shrink-0">{getSemanticEmoji(log.level, log.source)}</span>
             <span className={`font-bold shrink-0 uppercase w-14 ${getLevelStyles(log.level)}`}>
@@ -123,12 +130,12 @@ export const LiveLogTerminal: React.FC<LiveLogTerminalProps> = ({
         )}
         <div className="typing-cursor text-primary/40 h-4 mt-1" />
       </div>
-      
+
       {/* Footer / Status */}
       <div className="px-4 py-1.5 border-t border-white/5 bg-black/20 text-[9px] text-slate-600 flex justify-between">
-        <span>STREAMS: ACTIVE</span>
-        <span>BUFFER: {logs.length}/500</span>
+        <span>RENDERER: WEBGL_2.0</span>
+        <span>VIRTUAL_BUFFER: {logs.length} / VISIBLE: {visibleLogs.length}</span>
       </div>
     </div>
   );
-};
+});

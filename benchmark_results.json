@@ -1,0 +1,83 @@
+[
+  {
+    "agent_name": "Threat Prophet",
+    "test_name": "Analyze IP (Basic)",
+    "duration_ms": 16.122090000862954,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'target': '192.168.1.5', 'indicators': [], 'techniques': [{'technique_id': 'T1056', 'name': 'Input ...",
+    "error": ""
+  },
+  {
+    "agent_name": "OSINT Hunter",
+    "test_name": "Domain Investigate",
+    "duration_ms": 11.983983997197356,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'target': 'example.com', 'depth': 'shallow', 'findings': [{'source': 'google_dorking', 'finding_typ...",
+    "error": ""
+  },
+  {
+    "agent_name": "OSINT Hunter",
+    "test_name": "Breach Check (Mock)",
+    "duration_ms": 6.073769000067841,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'email': 'test@example.com', 'breached': False, 'breach_count': 0, 'breaches': []}...",
+    "error": ""
+  },
+  {
+    "agent_name": "Compliance Guardian",
+    "test_name": "GDPR Assessment",
+    "duration_ms": 11.411854000471067,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'target': 'database_01', 'framework': 'gdpr', 'overall_status': 'non_compliant', 'overall_score': 6...",
+    "error": ""
+  },
+  {
+    "agent_name": "Magistrate",
+    "test_name": "Validate Safe Action",
+    "duration_ms": 10.821248997672228,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'decision_id': 'decision_1769021646755', 'decision_type': 'approved', 'action': 'Update system logs...",
+    "error": ""
+  },
+  {
+    "agent_name": "Magistrate",
+    "test_name": "Block Destructive Action",
+    "duration_ms": 11.602758000663016,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'decision_id': 'decision_1769021646765', 'decision_type': 'requires_human_review', 'action': 'Delet...",
+    "error": ""
+  },
+  {
+    "agent_name": "PatchML",
+    "test_name": "Detect SQL Injection",
+    "duration_ms": 6.5350920012861025,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'risk_score': 0.9, 'risk_level': 'CRITICAL', 'confidence': 0.92, 'flags': ['SQL Injection detected'...",
+    "error": ""
+  },
+  {
+    "agent_name": "Wargame",
+    "test_name": "Run Scenario scenario_001 (Dry Run)",
+    "duration_ms": 6.790000999899348,
+    "success": true,
+    "ai_used": false,
+    "output_summary": "{'scenario_id': 'scenario_001', 'execution_id': 'tabletop_1769021646', 'timestamp': 1769021646.78584...",
+    "error": ""
+  },
+  {
+    "agent_name": "AI Threat",
+    "test_name": "LLM Threat Analysis",
+    "duration_ms": 18388.901099002396,
+    "success": true,
+    "ai_used": true,
+    "output_summary": "{'risk_level': 'high', 'confidence': 0.85, 'insights': ['The target IP 10.0.0.5 is a private RFC 191...",
+    "error": ""
+  }
+]

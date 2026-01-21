@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Eye, FileUp, ShieldAlert, Loader2, Music, Video, FileText, Globe, Search, Camera, CornerDownRight, Cpu, Target, Fingerprint } from 'lucide-react';
 import { mcpClient } from '../../services/mcpClient';
+import { AgentControlCard } from './AgentControlCard';
+import { LiveTerminal } from '../CommandCenter/LiveTerminal';
 
 interface AnalysisResult {
   findings: string;
@@ -51,7 +53,7 @@ export const VisionarySentinelPanel: React.FC = () => {
       } else {
         payload.file_url = fileUrl;
       }
-      
+
       const resp = await mcpClient.execute('visionary_analyze', payload);
       if (resp.success) {
         setResult(resp.data);
@@ -68,7 +70,7 @@ export const VisionarySentinelPanel: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 h-full font-display">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
-        
+
         {/* LEFT COLUMN: Input & Viewport */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           <div className="flex flex-col gap-3">
@@ -76,11 +78,11 @@ export const VisionarySentinelPanel: React.FC = () => {
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Evidence Input</span>
               <span className="text-[9px] font-mono text-primary/40 tracking-tighter">SOURCE_MODALITY: {file ? 'BINARY' : 'REMOTE_LINK'}</span>
             </div>
-            
+
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
-                <input 
+                <input
                   type="text"
                   value={fileUrl}
                   onChange={(e) => setFileUrl(e.target.value)}
@@ -112,7 +114,7 @@ export const VisionarySentinelPanel: React.FC = () => {
                     {isAnalyzing && (
                       <div className="absolute left-0 w-full h-1 bg-primary/50 shadow-neon-cyan z-20 animate-scanline" />
                     )}
-                    
+
                     <div className={`transition-all duration-700 ${isAnalyzing ? 'scale-105 blur-[1px]' : 'scale-100'}`}>
                       {preview.startsWith('http') ? (
                         <div className="flex flex-col items-center gap-4">
@@ -131,16 +133,16 @@ export const VisionarySentinelPanel: React.FC = () => {
 
                     {/* Metadata Overlay */}
                     <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                       <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-lg p-2 flex flex-col gap-1">
-                          <span className="text-[8px] font-black text-slate-500 uppercase">File Metadata</span>
-                          <span className="text-[9px] font-mono text-white truncate max-w-[150px]">{file?.name || 'REMOTE_STREAM'}</span>
-                       </div>
-                       <button 
-                        onClick={() => {setFile(null); setFileUrl(''); setPreview(null); setResult(null);}}
+                      <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-lg p-2 flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-500 uppercase">File Metadata</span>
+                        <span className="text-[9px] font-mono text-white truncate max-w-[150px]">{file?.name || 'REMOTE_STREAM'}</span>
+                      </div>
+                      <button
+                        onClick={() => { setFile(null); setFileUrl(''); setPreview(null); setResult(null); }}
                         className="p-2 bg-status-error/10 hover:bg-status-error/20 border border-status-error/30 rounded-lg transition-colors"
-                       >
-                         <ShieldAlert className="w-3 h-3 text-status-error" />
-                       </button>
+                      >
+                        <ShieldAlert className="w-3 h-3 text-status-error" />
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -156,11 +158,11 @@ export const VisionarySentinelPanel: React.FC = () => {
           {/* Action Hub */}
           <div className="bg-background-card/40 rounded-2xl border border-white/5 p-5 flex flex-col gap-5">
             <div className="grid grid-cols-2 gap-2">
-              {[ 
+              {[
                 { id: 'forensic', icon: Fingerprint, label: 'Forensic' },
                 { id: 'compliance', icon: Target, label: 'Compliance' },
                 { id: 'threat_intelligence', icon: ShieldAlert, label: 'Threat Intel' },
-                { id: 'incident_response', icon: Activity, label: 'Inc. Response' } 
+                { id: 'incident_response', icon: Activity, label: 'Inc. Response' }
               ].map(m => (
                 <button
                   key={m.id}
@@ -235,41 +237,61 @@ export const VisionarySentinelPanel: React.FC = () => {
                 </div>
               </div>
 
-              {/* Footer Metrics */}
-              <div className="px-6 py-4 border-t border-white/5 bg-black/40 flex justify-between items-center">
-                <div className="flex gap-6">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-slate-600 uppercase">Neural Engine</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{result.model}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-slate-600 uppercase">Telemetry Usage</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{result.usage} UNITS</span>
+              {/* Footer Metrics & Control Hub */}
+              <div className="border-t border-white/5 bg-black/40 flex flex-col">
+                {/* C2 Interface */}
+                <div className="p-4 border-b border-white/5 bg-white/[0.02]">
+                  <div className="grid grid-cols-2 gap-4">
+                    <AgentControlCard
+                      agentId="visionary_sentinel"
+                      agentType="VISIONARY SENTINEL"
+                    />
+                    <div className="bg-primary/5 border border-primary/10 rounded-lg p-0 overflow-hidden flex flex-col h-full min-h-[140px]">
+                      <div className="px-4 py-1.5 bg-black/20 border-b border-primary/10">
+                        <h4 className="text-[9px] font-bold text-primary uppercase tracking-widest">Neural Link: VISION</h4>
+                      </div>
+                      <div className="flex-1 min-h-0">
+                        <LiveTerminal filter="visionary_sentinel" />
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-black text-slate-400 transition-all">
-                  <FileText className="w-3 h-3" /> EXPORT PDF
-                </button>
+
+                <div className="px-6 py-4 flex justify-between items-center">
+                  <div className="flex gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-600 uppercase">Neural Engine</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{result.model}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-600 uppercase">Telemetry Usage</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{result.usage} UNITS</span>
+                    </div>
+                  </div>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-black text-slate-400 transition-all">
+                    <FileText className="w-3 h-3" /> EXPORT PDF
+                  </button>
+                </div>
               </div>
             </div>
           ) : isAnalyzing ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-black/40 rounded-2xl border border-white/5 relative overflow-hidden">
-               <div className="scanline-bg absolute inset-0 opacity-20" />
-               <div className="relative z-10 flex flex-col items-center gap-8">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full border border-primary/10 animate-ping" />
-                    <div className="absolute inset-0 w-24 h-24 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Cpu className="w-8 h-8 text-primary animate-pulse" />
-                    </div>
+              <div className="scanline-bg absolute inset-0 opacity-20" />
+              <div className="relative z-10 flex flex-col items-center gap-8">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full border border-primary/10 animate-ping" />
+                  <div className="absolute inset-0 w-24 h-24 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Cpu className="w-8 h-8 text-primary animate-pulse" />
                   </div>
-                  <div className="text-center">
-                    <h3 className="text-xl font-black text-white uppercase tracking-[0.3em] mb-2">Processing Neural Layers</h3>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest max-w-[200px] leading-relaxed mx-auto">
-                      Decoding multimodal signals through Gemini 3 Pro Reasoning Core...
-                    </p>
-                  </div>
-               </div>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-xl font-black text-white uppercase tracking-[0.3em] mb-2">Processing Neural Layers</h3>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest max-w-[200px] leading-relaxed mx-auto">
+                    Decoding multimodal signals through Gemini 3 Pro Reasoning Core...
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 border-2 border-dashed border-white/5 rounded-3xl group hover:border-primary/10 transition-colors duration-700">

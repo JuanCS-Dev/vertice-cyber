@@ -58,7 +58,8 @@ class VisionarySentinel:
 
     async def _fetch_url(self, url: str) -> tuple[str, str]:
         """Baixa o conteúdo da URL e retorna (base64_data, mime_type)."""
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        headers = {"User-Agent": "Vertice-Cyber/2.0 (Bot)"}
+        async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.content

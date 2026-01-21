@@ -1,0 +1,8 @@
+1. Configurar `HIBP_API_KEY` e `REDIS_URL` no ambiente de produção.                                                  │
+2. Ativar flags `FF_OSINT_USE_REAL_HIBP=true` após validar credenciais.                                              │
+3. Iniciar Fase 3 (Threat Intel) seguindo o mesmo padrão de Provider.
+
+⚠️ HIBP Provider: Não configurado (usará fallback)
+⚠️ HIBP Provider: Não configurado (usará fallback)                                                                       │
+⚠️ OTX Provider: Não configurado (usará fallback)                                                                        │
+⚠️ VirusTotal Provider: Não configurado (usará fallback)

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Activity, ShieldAlert, TrendingUp, Search, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { mcpClient } from '../../services/mcpClient';
+import { AgentControlCard } from './AgentControlCard';
+import { LiveTerminal } from '../CommandCenter/LiveTerminal';
 
 interface ThreatIndicator {
   indicator_type: string;
@@ -32,12 +34,12 @@ export const ThreatProphetPanel: React.FC = () => {
     if (!target) return;
     setIsAnalyzing(true);
     setError(null);
-    
+
     const result = await mcpClient.execute('threat_analyze', {
       target: target,
       include_predictions: true
     });
-    
+
     if (result.success) {
       setAnalysis(result.data);
     } else {
@@ -127,14 +129,31 @@ export const ThreatProphetPanel: React.FC = () => {
 
           {/* Predictions & Risk */}
           <div className="flex flex-col gap-6">
+
+            {/* C2 CARD */}
+            <AgentControlCard
+              agentId="threat_prophet"
+              agentType="THREAT PROPHET"
+            />
+
             <div className="bg-secondary/5 border border-secondary/20 rounded-xl p-6 flex flex-col items-center text-center gap-4">
-               <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">Calculated Risk Score</span>
-               <div className="text-5xl font-bold text-white drop-shadow-neon-purple">
-                 {analysis.overall_risk_score.toFixed(0)}
-               </div>
-               <div className="px-3 py-1 rounded bg-secondary text-[10px] font-bold text-white uppercase tracking-widest">
-                 {analysis.overall_risk_score > 70 ? 'CRITICAL' : 'ELEVATED'}
-               </div>
+              <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">Calculated Risk Score</span>
+              <div className="text-5xl font-bold text-white drop-shadow-neon-purple">
+                {analysis.overall_risk_score.toFixed(0)}
+              </div>
+              <div className="px-3 py-1 rounded bg-secondary text-[10px] font-bold text-white uppercase tracking-widest">
+                {analysis.overall_risk_score > 70 ? 'CRITICAL' : 'ELEVATED'}
+              </div>
+            </div>
+
+            {/* NEURAL STREAM */}
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-0 overflow-hidden flex flex-col h-[250px]">
+              <div className="px-4 py-2 bg-black/20 border-b border-primary/10">
+                <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest">Neural Link: THREAT</h4>
+              </div>
+              <div className="flex-1 min-h-0">
+                <LiveTerminal filter="threat_prophet" />
+              </div>
             </div>
 
             <section className="bg-black/20 border border-white/5 rounded-xl p-4">

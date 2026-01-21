@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Lock, FileCheck, AlertCircle, Search, Loader2, ClipboardList, Shield } from 'lucide-react';
 import { mcpClient } from '../../services/mcpClient';
+import { AgentControlCard } from './AgentControlCard';
+import { LiveTerminal } from '../CommandCenter/LiveTerminal';
 
 export const ComplianceGuardianPanel: React.FC = () => {
   const [target, setTarget] = useState('');
@@ -21,12 +23,12 @@ export const ComplianceGuardianPanel: React.FC = () => {
     if (!target) return;
     setIsAssessing(true);
     setError(null);
-    
+
     const result = await mcpClient.execute('compliance_assess', {
       target: target,
       framework: framework
     });
-    
+
     if (result.success) {
       setReport(result.data);
     } else {
@@ -41,7 +43,7 @@ export const ComplianceGuardianPanel: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-1">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Framework</label>
-          <select 
+          <select
             value={framework}
             onChange={(e) => setFramework(e.target.value)}
             className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-primary/50"
@@ -120,34 +122,47 @@ export const ComplianceGuardianPanel: React.FC = () => {
             </div>
           </div>
 
-          {/* Compliance Stats */}
-          <div className="flex flex-col gap-4">
+          {/* Compliance Stats with LIVE TERMINAL */}
+          <div className="flex flex-col gap-4 h-[600px]"> {/* Increased height for terminal */}
+
+            {/* ABSOLUTE CONTROL - C2 CARD */}
+            <AgentControlCard
+              agentId="compliance_guardian"
+              agentType="COMPLIANCE GUARDIAN"
+            />
+
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col items-center text-center gap-4">
-               <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Compliance Score</span>
-               <div className="text-5xl font-bold text-white drop-shadow-neon-cyan">
-                 {report.score}%
-               </div>
-               <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                 <div className="h-full bg-primary" style={{ width: `${report.score}%` }} />
-               </div>
+              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Compliance Score</span>
+              <div className="text-5xl font-bold text-white drop-shadow-neon-cyan">
+                {report.score}%
+              </div>
+              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${report.score}%` }} />
+              </div>
             </div>
 
             <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex flex-col gap-4">
-               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Summary</h4>
-               <div className="grid grid-cols-2 gap-2">
-                  <div className="p-3 bg-black/40 rounded border border-white/5">
-                    <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Passed</span>
-                    <span className="text-xl font-bold text-status-online">{report.summary?.passed || 0}</span>
-                  </div>
-                  <div className="p-3 bg-black/40 rounded border border-white/5">
-                    <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Failed</span>
-                    <span className="text-xl font-bold text-status-error">{report.summary?.failed || 0}</span>
-                  </div>
-               </div>
-               <div className="flex items-center gap-2 p-2 rounded bg-white/5 border border-white/5">
-                  <FileCheck className="w-4 h-4 text-slate-400" />
-                  <span className="text-[9px] text-slate-400 font-medium">Auto-generated audit report ready.</span>
-               </div>
+              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Summary</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 bg-black/40 rounded border border-white/5">
+                  <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Passed</span>
+                  <span className="text-xl font-bold text-status-online">{report.summary?.passed || 0}</span>
+                </div>
+                <div className="p-3 bg-black/40 rounded border border-white/5">
+                  <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Failed</span>
+                  <span className="text-xl font-bold text-status-error">{report.summary?.failed || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* LIVE NEURAL STREAM */}
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-0 overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="px-4 py-2 bg-black/20 border-b border-primary/10">
+                <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest">Neural Link: COMPLIANCE</h4>
+              </div>
+              <div className="flex-1 min-h-0">
+                <LiveTerminal filter="compliance_guardian" />
+              </div>
             </div>
           </div>
         </div>

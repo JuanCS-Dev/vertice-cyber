@@ -138,7 +138,7 @@ class ThreatProphet:
 
         # Cache results
         cache_key = f"threat_analysis:{target}:{include_predictions}"
-        self.memory.set(cache_key, analysis.model_dump(), ttl_seconds=1800)
+        await self.memory.set(cache_key, analysis.model_dump(), ttl_seconds=1800)
 
         await self.event_bus.emit(
             EventType.THREAT_PREDICTED,

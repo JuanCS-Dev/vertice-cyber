@@ -77,7 +77,7 @@ class MCPClient {
   /**
    * Verifica health do sistema.
    */
-  async healthCheck() {
+  async health() {
     try {
       const response = await fetch(`${this.baseUrl}/health`);
       return await response.json();

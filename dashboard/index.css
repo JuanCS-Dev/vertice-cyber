@@ -1,100 +1,160 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer components {
-  /* Glass Panel Effect - Refinado com borda interna */
-  .glass-panel {
-    @apply bg-background-card/40 backdrop-blur-xl border border-white/5 shadow-glass-inner transition-all duration-500;
+@theme {
+  /* ALIEN PALETTE: Xenomorphic Void */
+  --color-primary: #00f2ff;       /* Toxic Cyan */
+  --color-primary-dark: #00a3cc;
+  --color-secondary: #bc13fe;     /* Ultraviolet */
+  --color-accent: #00ff9f;        /* Bio-Slime Green */
+  
+  /* Deep Space Voids */
+  --color-background-dark: #000000;      /* Absolute Void */
+  --color-background-card: #050505;      /* Event Horizon */
+  --color-surface-dark: #0a0a0a;         /* Matte Black Material */
+  
+  /* Semantic Status - Hyper Saturated */
+  --color-status-online: #00ff9f;
+  --color-status-warning: #ffea00;
+  --color-status-error: #ff003c;         /* Cyberpunk Red */
+  --color-status-info: #00f2ff;
+  
+  /* HOLOGRAPHIC SHADOWS */
+  --shadow-neon-cyan: 0 0 30px rgba(0, 242, 255, 0.4), 0 0 10px rgba(0, 242, 255, 0.8);
+  --shadow-neon-purple: 0 0 30px rgba(188, 19, 254, 0.4), 0 0 10px rgba(188, 19, 254, 0.8);
+  --shadow-neon-green: 0 0 30px rgba(0, 255, 159, 0.3);
+  --shadow-glow-status: 0 0 15px currentColor;
+  --shadow-glass-inner: inset 0 0 20px rgba(255, 255, 255, 0.03);
+
+  /* ALIEN TYPOGRAPHY */
+  --font-display: "Rajdhani", "Orbitron", sans-serif; /* Requires Google Font Import */
+  --font-mono: "Share Tech Mono", monospace;
+  
+  --letter-spacing-alien: 0.35em;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&family=Share+Tech+Mono&display=swap');
+
+@layer base {
+  body {
+    @apply bg-background-dark text-slate-300 font-display antialiased selection:bg-primary selection:text-black;
+    cursor: crosshair; /* Tactical Cursor */
   }
   
-  .glass-panel:hover {
-    @apply border-white/10 bg-background-card/50;
+  h1, h2, h3, h4 {
+    @apply text-white uppercase tracking-alien drop-shadow-[0_0_10px_rgba(255,255,255,0.5)];
+  }
+  
+  /* Custom Scrollbar - The "Alien Vein" */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-black;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 rounded-full hover:bg-primary transition-colors;
+  }
+}
+
+@layer components {
+  /* XENOMORPHIC GLASS */
+  .glass-panel {
+    @apply bg-black/60 backdrop-blur-2xl border border-white/10 shadow-glass-inner transition-all duration-500 relative overflow-hidden;
+    clip-path: polygon(
+      0 10px, 
+      10px 0, 
+      100% 0, 
+      100% calc(100% - 10px), 
+      calc(100% - 10px) 100%, 
+      0 100%
+    ); /* Sci-Fi Cut Corners */
+  }
+  
+  .glass-panel::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 transition-opacity duration-500;
+  }
+  
+  .glass-panel:hover::before {
+    @apply opacity-100;
   }
 
-  /* Magnetic Glow Effect */
+  /* NEON BUTTONS */
   .btn-neon {
-    @apply relative overflow-hidden transition-all duration-300 active:scale-95;
+    @apply relative overflow-hidden font-mono font-bold uppercase tracking-widest transition-all duration-300 active:scale-95 border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary text-primary shadow-[0_0_15px_rgba(0,242,255,0.1)];
   }
   
   .btn-neon::after {
     content: '';
-    @apply absolute inset-0 bg-white/5 opacity-0 transition-opacity duration-300;
+    @apply absolute inset-0 bg-primary/20 transform skew-x-12 translate-x-[-150%] transition-transform duration-500;
   }
   
   .btn-neon:hover::after {
-    @apply opacity-100;
+    @apply translate-x-[150%];
   }
 
-  /* Active Agent Indicator - Sutil e elegante */
-  .active-agent-glow {
-    @apply relative overflow-hidden bg-primary/5 !important;
-  }
-  
-  .active-agent-glow::before {
-    content: '';
-    @apply absolute left-0 top-0 h-full w-0.5 bg-primary shadow-[0_0_15px_#00f2ff];
-    animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  /* PULSING ORGANIC GLOW */
+  .alien-pulse {
+    animation: alienBreath 4s ease-in-out infinite;
   }
 
-  @keyframes slide-in {
-    from { transform: translateY(-100%); }
-    to { transform: translateY(0); }
+  @keyframes alienBreath {
+    0%, 100% { opacity: 0.5; transform: scale(1); filter: hue-rotate(0deg); }
+    50% { opacity: 1; transform: scale(1.05); filter: hue-rotate(15deg); }
   }
 
-  /* Neural Heartbeat Animation */
-  .heartbeat-line {
-    stroke-dasharray: 100;
-    animation: dash 2s linear infinite;
-  }
-
-  @keyframes dash {
-    from { stroke-dashoffset: 100; }
-    to { stroke-dashoffset: 0; }
-  }
-
-  /* Visionary Scanline Effect */
-  .animate-scanline {
-    animation: scanline 2s linear infinite;
-  }
-
-  @keyframes scanline {
-    0% { top: 0%; opacity: 0; }
-    50% { opacity: 1; }
-    100% { top: 100%; opacity: 0; }
-  }
-
-  .scanning-glitch {
-    animation: glitch 0.3s ease-in-out infinite;
-  }
-
-  @keyframes glitch {
-    0% { transform: translate(0); }
-    20% { transform: translate(-1px, 1px); }
-    40% { transform: translate(-1px, -1px); }
-    60% { transform: translate(1px, 1px); }
-    80% { transform: translate(1px, -1px); }
-    100% { transform: translate(0); }
+  /* SCANLINE CRT EFFECT */
+  .crt-overlay {
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
   }
 }
 
-@layer base {
-  body {
-    @apply bg-background-dark text-slate-400 font-display antialiased tracking-tight;
-  }
-  
-  h1, h2, h3, h4 {
-    @apply text-slate-200 tracking-tightest;
-  }
+/* GLITCH ANIMATIONS */
+.glitch-text {
+  position: relative;
 }
 
-/* Typing Cursor for Logs */
-.typing-cursor::after {
-  content: '|';
-  animation: blink 1s step-end infinite;
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+.glitch-text::before {
+  left: 2px;
+  text-shadow: -1px 0 #ff00c1;
+  clip: rect(44px, 450px, 56px, 0);
+  animation: glitch-anim 5s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+  left: -2px;
+  text-shadow: -1px 0 #00fff9;
+  clip: rect(44px, 450px, 56px, 0);
+  animation: glitch-anim2 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(14px, 9999px, 89px, 0); }
+  20% { clip: rect(54px, 9999px, 12px, 0); }
+  40% { clip: rect(24px, 9999px, 5px, 0); }
+  60% { clip: rect(62px, 9999px, 78px, 0); }
+  80% { clip: rect(11px, 9999px, 19px, 0); }
+  100% { clip: rect(82px, 9999px, 34px, 0); }
+}
+
+@keyframes glitch-anim2 {
+  0% { clip: rect(65px, 9999px, 91px, 0); }
+  20% { clip: rect(32px, 9999px, 15px, 0); }
+  40% { clip: rect(10px, 9999px, 4px, 0); }
+  60% { clip: rect(78px, 9999px, 62px, 0); }
+  80% { clip: rect(41px, 9999px, 23px, 0); }
+  100% { clip: rect(3px, 9999px, 31px, 0); }
 }

@@ -7,6 +7,9 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Optional
+import json
+
+from core.database import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -28,36 +31,57 @@ class AgentMemory:
     def __init__(self, agent_name: str, max_entries: int = 10000):
         self.agent_name = agent_name
         self.max_entries = max_entries
-        self._store: Dict[str, MemoryEntry] = {}
+        self.db = get_db()  # Lazy load or imported? We need import inside method or globally.
+        # Assuming generic 'get_db' import available in module scope now.
 
-    def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None) -> None:
-        """Armazena valor."""
-        if len(self._store) >= self.max_entries:
-            self._evict_oldest()
+    async def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None) -> None:
+        """Armazena valor via SQLite."""
+        # import json - REMOVED (Shadows outer scope)
+        
+        # Enforce max entries (eviction) - skipped for perf in Phase 3 or implement count check?
+        # Let's simple insert/replace.
+        
+        await self.db.execute(
+            """
+            INSERT OR REPLACE INTO memory_store (agent_name, key, value, ttl_seconds, created_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (self.agent_name, key, json.dumps(value, default=str), ttl_seconds)
+        )
 
-        self._store[key] = MemoryEntry(key=key, value=value, ttl_seconds=ttl_seconds)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Recupera valor."""
-        entry = self._store.get(key)
-        if entry is None:
+    async def get(self, key: str, default: Any = None) -> Any:
+        """Recupera valor via SQLite."""
+        # import json - REMOVED
+        row = await self.db.fetch_one(
+            "SELECT value, ttl_seconds, created_at FROM memory_store WHERE agent_name = ? AND key = ?",
+            (self.agent_name, key)
+        )
+        if not row:
             return default
-
-        if entry.ttl_seconds is not None:
-            age = (datetime.utcnow() - entry.created_at).total_seconds()
-            if age > entry.ttl_seconds:
-                del self._store[key]
+            
+        # Check TTL
+        if row['ttl_seconds']:
+            created_at = datetime.strptime(row['created_at'], "%Y-%m-%d %H:%M:%S")
+            age = (datetime.utcnow() - created_at).total_seconds()
+            if age > row['ttl_seconds']:
+                await self.delete(key)
                 return default
+                
+        # Update access count
+        await self.db.execute(
+            "UPDATE memory_store SET access_count = access_count + 1 WHERE agent_name = ? AND key = ?",
+            (self.agent_name, key)
+        )
+        
+        return json.loads(row['value'])
 
-        entry.access_count += 1
-        return entry.value
-
-    def delete(self, key: str) -> bool:
+    async def delete(self, key: str) -> bool:
         """Remove entrada."""
-        if key in self._store:
-            del self._store[key]
-            return True
-        return False
+        cursor = await self.db.execute(
+            "DELETE FROM memory_store WHERE agent_name = ? AND key = ?",
+            (self.agent_name, key)
+        )
+        return cursor.rowcount > 0
 
     def _evict_oldest(self) -> None:
         """Remove entrada mais antiga."""

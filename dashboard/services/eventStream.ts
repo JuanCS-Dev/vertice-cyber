@@ -1,167 +1,149 @@
+
 /**
- * MCP Event Stream (WebSocket)
- * Real-time events do MCP Server
+ * Neural Mesh Event Stream
+ * Real-time bidirectional link to the Vertice Core.
  */
 
-import type { MCPEvent } from '../types/mcp';
+import { z } from 'zod';
 
-// Access Vite env with proper typing
-declare const import_meta_env: { VITE_MCP_WS_URL?: string } | undefined;
+export interface EventHandler {
+    (event: any): void;
+}
+
+export interface WebSocketMessage {
+    type: string;
+    [key: string]: any;
+}
+
+// Access Vite env
 const WS_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_MCP_WS_URL)
     || 'ws://localhost:8001/mcp/events';
 
-type EventCallback = (event: MCPEvent) => void;
-
-export class MCPEventStream {
+export class VerticeEventStream {
     private ws: WebSocket | null = null;
-    private listeners = new Map<string, Set<EventCallback>>();
+    private subscriptions = new Map<string, Set<EventHandler>>();
     private reconnectAttempts = 0;
-    private maxReconnectAttempts = 5;
-    private reconnectDelay = 2000;
-    private isConnecting = false;
+    private readonly MAX_RECONNECT_ATTEMPTS = 10;
     private shouldReconnect = true;
 
-    /**
-     * Conecta ao WebSocket
-     */
-    connect(): void {
-        if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
-            return;
-        }
+    constructor(private url: string = WS_URL) {
+        this.connect();
+    }
 
-        this.isConnecting = true;
-        this.shouldReconnect = true;
+    public connect(): void {
+        if (this.ws?.readyState === WebSocket.OPEN) return;
 
         try {
-            this.ws = new WebSocket(WS_URL);
+            this.ws = new WebSocket(this.url);
 
             this.ws.onopen = () => {
-                console.log('✅ Connected to MCP Event Stream');
+                console.log('[Neural Link] Connected');
                 this.reconnectAttempts = 0;
-                this.isConnecting = false;
-                this.emit('_connected', { type: '_connected', timestamp: new Date().toISOString() } as any);
+                this.dispatch({ type: 'system.connected', timestamp: new Date().toISOString() });
             };
 
             this.ws.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data);
-
-                    // Heartbeat interno (não emitir para UI, apenas log debug)
-                    if (data.type === 'heartbeat') {
-                        console.debug('💓 Heartbeat received');
-                        return;
-                    }
-
-                    // Connected message
-                    if (data.type === 'connected') {
-                        console.log('📡 MCP says:', data.message);
-                        return;
-                    }
-
-                    // Emitir evento para listeners específicos
-                    this.emit(data.type, data);
-
-                    // Também emitir para listener genérico '*'
-                    this.emit('*', data);
-
+                    const msg = JSON.parse(event.data);
+                    this.dispatch(msg);
                 } catch (err) {
-                    console.error('❌ Failed to parse WebSocket message:', err);
+                    console.error('[Neural Link] Parse error:', err);
                 }
             };
 
             this.ws.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
-                this.isConnecting = false;
+                console.error('[Neural Link] Error:', error);
             };
 
             this.ws.onclose = () => {
-                console.warn('🔌 WebSocket closed');
-                this.isConnecting = false;
+                console.warn('[Neural Link] Connection closed');
                 this.ws = null;
-                this.emit('_disconnected', { type: '_disconnected', timestamp: new Date().toISOString() } as any);
-
+                this.dispatch({ type: 'system.disconnected', timestamp: new Date().toISOString() });
                 if (this.shouldReconnect) {
-                    this.attemptReconnect();
+                    this.handleReconnect();
                 }
             };
-
         } catch (err) {
-            console.error('❌ WebSocket connection failed:', err);
-            this.isConnecting = false;
-            this.attemptReconnect();
+            console.error('[Neural Link] Connection failed:', err);
+            this.handleReconnect();
         }
     }
 
-    /**
-     * Desconecta do WebSocket
-     */
-    disconnect(): void {
-        this.shouldReconnect = false;
-        this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnect
-        if (this.ws) {
-            this.ws.close();
-            this.ws = null;
-        }
-        this.listeners.clear();
-    }
-
-    /**
-     * Registra listener para tipo de evento
-     */
-    on(eventType: string, callback: EventCallback): () => void {
-        if (!this.listeners.has(eventType)) {
-            this.listeners.set(eventType, new Set());
-        }
-
-        this.listeners.get(eventType)!.add(callback);
-
-        // Retorna função para unsubscribe
-        return () => {
-            this.listeners.get(eventType)?.delete(callback);
-        };
-    }
-
-    /**
-     * Emite evento para listeners
-     */
-    private emit(eventType: string, data: MCPEvent): void {
-        const callbacks = this.listeners.get(eventType);
-        if (callbacks) {
-            callbacks.forEach(cb => {
-                try {
-                    cb(data);
-                } catch (err) {
-                    console.error(`Error in event listener for ${eventType}:`, err);
-                }
-            });
-        }
-    }
-
-    /**
-     * Tenta reconectar com backoff exponencial
-     */
-    private attemptReconnect(): void {
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error(`❌ Max reconnection attempts (${this.maxReconnectAttempts}) reached`);
-            this.emit('_max_reconnect', { type: '_max_reconnect' } as any);
+    private handleReconnect(): void {
+        if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+            console.error('[Neural Link] Critical: Max reconnection attempts reached');
             return;
         }
 
-        this.reconnectAttempts++;
-        const delay = this.reconnectDelay * this.reconnectAttempts;
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+        console.log(`[Neural Link] Reconnecting in ${delay}ms...`);
 
-        console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-
-        setTimeout(() => this.connect(), delay);
+        setTimeout(() => {
+            this.reconnectAttempts++;
+            this.connect();
+        }, delay);
     }
 
-    /**
-     * Status da conexão
-     */
-    get isConnected(): boolean {
-        return this.ws?.readyState === WebSocket.OPEN;
+    subscribe(pattern: string, handler: EventHandler): () => void {
+        if (!this.subscriptions.has(pattern)) {
+            this.subscriptions.set(pattern, new Set());
+        }
+        this.subscriptions.get(pattern)!.add(handler);
+
+        // Send subscription to server if connected
+        this.send({ type: 'subscribe', channel: pattern });
+
+        // Return unsubscribe function
+        return () => {
+            this.subscriptions.get(pattern)?.delete(handler);
+            if (this.subscriptions.get(pattern)?.size === 0) {
+                this.subscriptions.delete(pattern);
+                // Optional: Unsubscribe from server?
+            }
+        };
+    }
+
+    // Alias for compatibility if needed, or prefer subscribe
+    on(pattern: string, handler: EventHandler): () => void {
+        return this.subscribe(pattern, handler);
+    }
+
+    private dispatch(message: WebSocketMessage): void {
+        // Dispatch to exact matches and regex matches
+        for (const [pattern, handlers] of this.subscriptions) {
+            if (this.matchPattern(message.type, pattern)) {
+                handlers.forEach(handler => {
+                    try {
+                        handler(message);
+                    } catch (e) {
+                        console.error('[Neural Link] Handler error:', e);
+                    }
+                });
+            }
+        }
+    }
+
+    private matchPattern(eventType: string, pattern: string): boolean {
+        if (pattern === '*') return true;
+        if (pattern === eventType) return true;
+        // Simple wildcard support: "agent.*"
+        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        return regex.test(eventType);
+    }
+
+    send(message: object): void {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify(message));
+        } else {
+            console.warn('[Neural Link] Socket not ready, message dropped:', message);
+        }
+    }
+
+    disconnect(): void {
+        this.shouldReconnect = false;
+        this.ws?.close();
     }
 }
 
-// Singleton
-export const eventStream = new MCPEventStream();
+// Singleton export
+export const eventStream = new VerticeEventStream();

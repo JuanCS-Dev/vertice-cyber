@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { NeuralNetwork } from './components/NeuralNetwork';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
+import {
+  Shield,
+  Terminal,
+  Activity,
+  WifiOff,
+  RefreshCw
+} from 'lucide-react';
+import { useMCPAgents } from './hooks/useMCPAgents';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import {
   ThreatFeed, AgentList, GenAIConsole,
   ComplianceRadar, NetworkGraph
@@ -16,9 +24,11 @@ import { PatchValidatorPanel } from './components/agents/PatchValidatorPanel';
 import { CyberSecAgentPanel } from './components/agents/CyberSecAgentPanel';
 import { VisionarySentinelPanel } from './components/agents/VisionarySentinelPanel';
 import { LiveLogTerminal, LogEntry } from './components/LiveLogTerminal';
+import { WorkflowTab } from './components/workflows/WorkflowTab';
 import { mcpClient } from './services/mcpClient';
 
-// OPTIMIZATION: Memoize the 3D Component. 
+// OPTIMIZATION: Lazy load heavy 3D component
+const NeuralNetwork = lazy(() => import('./components/NeuralNetwork').then(m => ({ default: m.NeuralNetwork })));
 const MemoizedNeuralNetwork = React.memo(NeuralNetwork);
 
 const App: React.FC = () => {
@@ -67,6 +77,7 @@ const App: React.FC = () => {
     { id: 'patch-validator', name: 'Patch Validator ML', icon: 'database', status: 'idle', statusMessage: 'ML Models Active' },
     { id: 'visionary-sentinel', name: 'Visionary Sentinel', icon: 'activity', status: 'active', statusMessage: 'Multimodal Neural Scan' },
     { id: 'wargame-executor', name: 'Wargame Executor', icon: 'terminal', status: 'idle', statusMessage: 'Scenarios Ready' },
+    { id: 'workflows-manager', name: 'AI Workflows', icon: 'activity', status: 'active', statusMessage: 'Orchestration Hub' },
   ];
 
   const selectedAgent = uiAgents.find(a => a.id === selectedAgentId) || uiAgents[0];
@@ -74,18 +85,18 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <div className="w-full h-screen bg-background-dark text-slate-300 relative font-display select-none flex flex-col overflow-hidden">
-        
+
         {/* Connection Status Toast */}
         <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
-           {(!isConnected || error) && (
-              <div className="bg-status-error/20 backdrop-blur-md border border-status-error/50 px-4 py-2 rounded-lg flex items-center gap-3 shadow-lg">
-                <WifiOff className="w-4 h-4 text-status-error" />
-                <span className="text-sm text-status-error font-bold">MCP DISCONNECTED</span>
-                <button onClick={refetch} className="p-1 hover:bg-white/10 rounded transition-colors">
-                  <RefreshCw className="w-3 h-3 text-white" />
-                </button>
-              </div>
-           )}
+          {(!isConnected || error) && (
+            <div className="bg-status-error/20 backdrop-blur-md border border-status-error/50 px-4 py-2 rounded-lg flex items-center gap-3 shadow-lg">
+              <WifiOff className="w-4 h-4 text-status-error" />
+              <span className="text-sm text-status-error font-bold">MCP DISCONNECTED</span>
+              <button onClick={refetch} className="p-1 hover:bg-white/10 rounded transition-colors">
+                <RefreshCw className="w-3 h-3 text-white" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* --- TOP NAVIGATION / HEADER --- */}
@@ -111,51 +122,51 @@ const App: React.FC = () => {
             {/* Quick Metrics */}
             <div className="hidden lg:flex items-center gap-8 border-r border-white/10 pr-10">
               <div className="flex items-center gap-4">
-                 <Activity className="text-status-error w-4 h-4 opacity-70" />
-                 <div>
-                    <span className="block text-[8px] text-slate-500 uppercase font-black tracking-widest">Global Risk</span>
-                    <span className="text-xs font-mono text-status-error font-bold">ELEVATED</span>
-                 </div>
+                <Activity className="text-status-error w-4 h-4 opacity-70" />
+                <div>
+                  <span className="block text-[8px] text-slate-500 uppercase font-black tracking-widest">Global Risk</span>
+                  <span className="text-xs font-mono text-status-error font-bold">ELEVATED</span>
+                </div>
               </div>
               <div className="flex items-center gap-4">
-                 <div className="flex flex-col items-end">
-                    <span className="text-[8px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">AI Latency</span>
-                    <svg className="w-16 h-6 text-secondary opacity-50" viewBox="0 0 100 40">
-                      <path
-                        d={`M 0 20 ${latencyPoints.map((p, i) => `L ${i * 14} ${40 - p}`).join(' ')}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="heartbeat-line"
-                      />
-                    </svg>
-                 </div>
-                 <div className="h-8 w-px bg-white/5 mx-2" />
-                 <div className="flex flex-col">
-                    <span className="block text-[8px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">Logic Engine</span>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => handleModelChange('pro')}
-                        disabled={isSwitchingModel}
-                        className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded transition-all duration-300 ${activeModel === 'pro' ? 'bg-secondary text-white shadow-neon-purple scale-105' : 'bg-white/5 text-slate-500 hover:text-slate-300'}`}
-                      >
-                        3.0 PRO
-                      </button>
-                      <button 
-                        onClick={() => handleModelChange('flash')}
-                        disabled={isSwitchingModel}
-                        className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded transition-all duration-300 ${activeModel === 'flash' ? 'bg-primary text-background-dark shadow-neon-cyan scale-105' : 'bg-white/5 text-slate-500 hover:text-slate-300'}`}
-                      >
-                        3.0 FLASH
-                      </button>
-                    </div>
-                 </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[8px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">AI Latency</span>
+                  <svg className="w-16 h-6 text-secondary opacity-50" viewBox="0 0 100 40">
+                    <path
+                      d={`M 0 20 ${latencyPoints.map((p, i) => `L ${i * 14} ${40 - p}`).join(' ')}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="heartbeat-line"
+                    />
+                  </svg>
+                </div>
+                <div className="h-8 w-px bg-white/5 mx-2" />
+                <div className="flex flex-col">
+                  <span className="block text-[8px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">Logic Engine</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleModelChange('pro')}
+                      disabled={isSwitchingModel}
+                      className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded transition-all duration-300 ${activeModel === 'pro' ? 'bg-secondary text-white shadow-neon-purple scale-105' : 'bg-white/5 text-slate-500 hover:text-slate-300'}`}
+                    >
+                      3.0 PRO
+                    </button>
+                    <button
+                      onClick={() => handleModelChange('flash')}
+                      disabled={isSwitchingModel}
+                      className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded transition-all duration-300 ${activeModel === 'flash' ? 'bg-primary text-background-dark shadow-neon-cyan scale-105' : 'bg-white/5 text-slate-500 hover:text-slate-300'}`}
+                    >
+                      3.0 FLASH
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <button className="p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all group">
-                 <Terminal className="w-5 h-5 text-slate-500 group-hover:text-primary transition-colors" />
+                <Terminal className="w-5 h-5 text-slate-500 group-hover:text-primary transition-colors" />
               </button>
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400">
                 JD
@@ -166,10 +177,10 @@ const App: React.FC = () => {
 
         {/* --- MAIN LAYOUT --- */}
         <div className="flex-1 flex overflow-hidden p-6 gap-6">
-          
+
           {/* Sidebar - Agent Selection */}
           <aside className="w-80 shrink-0 h-full">
-            <AgentSidebar 
+            <AgentSidebar
               agents={uiAgents}
               selectedAgentId={selectedAgentId}
               onSelectAgent={setSelectedAgentId}
@@ -179,7 +190,7 @@ const App: React.FC = () => {
           {/* Center Column - Main Workspace */}
           <main className="flex-1 h-full flex flex-col gap-6">
             <div className="flex-1">
-              <AgentWorkspace 
+              <AgentWorkspace
                 agentName={selectedAgent.name}
                 agentStatus={selectedAgent.status.toUpperCase()}
                 description={selectedAgent.statusMessage}
@@ -192,15 +203,16 @@ const App: React.FC = () => {
                 {selectedAgentId === 'patch-validator' && <PatchValidatorPanel />}
                 {selectedAgentId === 'cybersec-agent' && <CyberSecAgentPanel />}
                 {selectedAgentId === 'visionary-sentinel' && <VisionarySentinelPanel />}
+                {selectedAgentId === 'workflows-manager' && <WorkflowTab />}
               </AgentWorkspace>
             </div>
 
             {/* Bottom Terminal */}
             {showTerminal && (
               <div className="h-64 shrink-0">
-                <LiveLogTerminal 
+                <LiveLogTerminal
                   logs={mcpLogs}
-                  onClear={() => {}} 
+                  onClear={() => { }}
                 />
               </div>
             )}
@@ -209,10 +221,10 @@ const App: React.FC = () => {
           {/* Right Column - Secondary Intelligence */}
           <aside className="w-80 shrink-0 h-full flex flex-col gap-4">
             <div className="h-1/2 overflow-hidden">
-               <ThreatFeed threats={threats} />
+              <ThreatFeed threats={threats} />
             </div>
             <div className="flex-1 overflow-hidden">
-               <AgentList agents={mcpAgents} />
+              <AgentList agents={mcpAgents} />
             </div>
           </aside>
 
@@ -220,7 +232,9 @@ const App: React.FC = () => {
 
         {/* Neural Background Overlay */}
         <div className="absolute inset-0 pointer-events-none z-0 opacity-10">
-           <MemoizedNeuralNetwork agents={mcpAgents} />
+          <Suspense fallback={null}>
+            <MemoizedNeuralNetwork agents={mcpAgents} />
+          </Suspense>
         </div>
       </div>
     </ErrorBoundary>

@@ -63,6 +63,7 @@ class EthicalSettings(BaseSettings):
 
     dangerous_keywords: list[str] = Field(
         default=[
+            # Attack vectors (existing)
             "exploit",
             "attack",
             "brute_force",
@@ -71,6 +72,25 @@ class EthicalSettings(BaseSettings):
             "ransomware",
             "zero_day",
             "exfiltrate",
+            # Destructive operations (NEW)
+            "delete",
+            "drop",
+            "truncate",
+            "wipe",
+            "format",
+            "rm -rf",
+            "shutdown",
+            "destroy",
+            "remove all",
+            # Sensitive contexts (NEW)
+            "database",
+            "production",
+            "backup",
+            "credentials",
+            "sudo",
+            "root",
+            "admin",
+            "firewall",
         ]
     )
     always_require_approval: list[str] = Field(
